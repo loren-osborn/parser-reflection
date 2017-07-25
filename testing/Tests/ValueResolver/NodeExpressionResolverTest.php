@@ -1,8 +1,9 @@
 <?php
-namespace Go\ParserReflection\ValueResolver;
+namespace Go\ParserReflection\Testing\Tests\ValueResolver;
 
 use PhpParser\Parser;
 use PhpParser\ParserFactory;
+use Go\ParserReflection\ValueResolver\NodeExpressionResolver;
 
 class NodeExpressionResolverTest extends \PHPUnit_Framework_TestCase
 {

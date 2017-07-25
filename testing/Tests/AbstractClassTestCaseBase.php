@@ -7,13 +7,15 @@
  * This source file is subject to the license that is bundled
  * with this source code in the file LICENSE.
  */
-namespace Go\ParserReflection;
+namespace Go\ParserReflection\Testing\Tests;
 
-use Go\ParserReflection\Stub\AbstractClassWithMethods;
+use Go\ParserReflection\Testing\Support\Stub\AbstractClassWithMethods;
+use Go\ParserReflection\ReflectionEngine;
+use Go\ParserReflection\ReflectionFile;
 
-abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
+abstract class AbstractClassTestCaseBase extends TestCaseBase
 {
-    const DEFAULT_STUB_FILENAME = '/Stub/FileWithClasses55.php';
+    const DEFAULT_STUB_FILENAME = 'FileWithClasses55.php';
 
     /**
      * @var ReflectionFileNamespace
@@ -21,7 +23,7 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
     protected $parsedRefFileNamespace;
 
     /**
-     * @var ReflectionClass
+     * @var \Go\ParserReflection\ReflectionClass
      */
     protected $parsedRefClass;
 
@@ -48,9 +50,9 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
             if ('export' === $internalMethodName) {
                 continue;
             }
-            $refMethod    = new \ReflectionMethod(__NAMESPACE__ . '\\' . static::$reflectionClassToTest, $internalMethodName);
+            $refMethod    = new \ReflectionMethod('Go\\ParserReflection\\' . static::$reflectionClassToTest, $internalMethodName);
             $definerClass = $refMethod->getDeclaringClass()->getName();
-            if (strpos($definerClass, __NAMESPACE__) !== 0) {
+            if (strpos($definerClass, 'Go\\ParserReflection\\') !== 0) {
                 $allMissedMethods[] = $internalMethodName;
             }
         }
@@ -68,16 +70,16 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
      */
     public function getFilesToAnalyze()
     {
-        $files = ['PHP5.5' => [__DIR__ . '/Stub/FileWithClasses55.php']];
+        $files = ['PHP5.5' => [$this->getStubDir() . '/FileWithClasses55.php']];
 
         if (PHP_VERSION_ID >= 50600) {
-            $files['PHP5.6'] = [__DIR__ . '/Stub/FileWithClasses56.php'];
+            $files['PHP5.6'] = [$this->getStubDir() . '/FileWithClasses56.php'];
         }
         if (PHP_VERSION_ID >= 70000) {
-            $files['PHP7.0'] = [__DIR__ . '/Stub/FileWithClasses70.php'];
+            $files['PHP7.0'] = [$this->getStubDir() . '/FileWithClasses70.php'];
         }
         if (PHP_VERSION_ID >= 70100) {
-            $files['PHP7.1'] = [__DIR__ . '/Stub/FileWithClasses71.php'];
+            $files['PHP7.1'] = [$this->getStubDir() . '/FileWithClasses71.php'];
         }
 
         return $files;
@@ -102,7 +104,7 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
 
         $reflectionFile = new ReflectionFile($fileName, $fileNode);
 
-        $parsedFileNamespace          = $reflectionFile->getFileNamespace('Go\ParserReflection\Stub');
+        $parsedFileNamespace          = $reflectionFile->getFileNamespace($this->getStubNamespace());
         $this->parsedRefFileNamespace = $parsedFileNamespace;
         $this->parsedRefClass         = $parsedFileNamespace->getClass(static::$defaultClassToLoad);
 
@@ -111,6 +113,6 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->setUpFile(__DIR__ . self::DEFAULT_STUB_FILENAME);
+        $this->setUpFile($this->getStubDir() . '/' . self::DEFAULT_STUB_FILENAME);
     }
 }

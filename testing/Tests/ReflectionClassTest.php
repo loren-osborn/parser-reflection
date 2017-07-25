@@ -1,15 +1,18 @@
 <?php
-namespace Go\ParserReflection;
+namespace Go\ParserReflection\Testing\Tests;
 
-use Go\ParserReflection\Stub\ClassWithConstantsAndInheritance;
-use Go\ParserReflection\Stub\ClassWithMagicConstants;
-use Go\ParserReflection\Stub\ClassWithMethodsAndProperties;
-use Go\ParserReflection\Stub\ClassWithScalarConstants;
-use Go\ParserReflection\Stub\FinalClass;
-use Go\ParserReflection\Stub\ImplicitAbstractClass;
-use Go\ParserReflection\Stub\SimpleAbstractInheritance;
+use Go\ParserReflection\Testing\Support\Stub\ClassWithConstantsAndInheritance;
+use Go\ParserReflection\Testing\Support\Stub\ClassWithMagicConstants;
+use Go\ParserReflection\Testing\Support\Stub\ClassWithMethodsAndProperties;
+use Go\ParserReflection\Testing\Support\Stub\ClassWithScalarConstants;
+use Go\ParserReflection\Testing\Support\Stub\FinalClass;
+use Go\ParserReflection\Testing\Support\Stub\ImplicitAbstractClass;
+use Go\ParserReflection\Testing\Support\Stub\SimpleAbstractInheritance;
+use Go\ParserReflection\ReflectionEngine;
+use Go\ParserReflection\ReflectionFile;
+use Go\ParserReflection\ReflectionClass;
 
-class ReflectionClassTest extends AbstractTestCase
+class ReflectionClassTest extends AbstractClassTestCaseBase
 {
     /**
      * Name of the class to compare
@@ -188,7 +191,7 @@ class ReflectionClassTest extends AbstractTestCase
             $this->assertEquals(M_PI, $parsedRefClass1->getStaticPropertyValue('h'), 'Close to expected value of M_PI', 0.0001);
             $this->assertEquals(M_PI, $originalRefClass1->getStaticPropertyValue('h'), 'Close to expected value of M_PI', 0.0001);
             $this->assertEquals(
-                realpath(dirname(__DIR__ . parent::DEFAULT_STUB_FILENAME)),
+                realpath(dirname($this->getStubDir() . '/' . parent::DEFAULT_STUB_FILENAME)),
                 realpath($parsedRefClass2->getStaticPropertyValue('a')),
                 'Expected value');
             $this->assertEquals(

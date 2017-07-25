@@ -9,3 +9,8 @@ if (defined("AUTOLOAD_PATH")) {
         throw new InvalidArgumentException("Cannot load custom autoload file located at ".AUTOLOAD_PATH);
     }
 }
+
+const GLOBAL_FUNCTIONS_TO_MOCK_BY_NAMESPACE = 'Go\\ParserReflection\\Instrument:realpath';
+
+foreach (explode(';', GLOBAL_FUNCTIONS_TO_MOCK_BY_NAMESPACE) as $eachNamespaceSpec) {
+}

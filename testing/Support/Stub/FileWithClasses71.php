@@ -9,7 +9,7 @@
  */
 declare(strict_types=1);
 
-namespace Go\ParserReflection\Stub;
+namespace Go\ParserReflection\Testing\Support\Stub;
 
 use Go\ParserReflection\{ReflectionMethod, ReflectionProperty as P};
 

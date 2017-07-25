@@ -1,10 +1,13 @@
 <?php
-namespace Go\ParserReflection;
+namespace Go\ParserReflection\Testing\Tests;
 
-class ReflectionFunctionTest extends \PHPUnit_Framework_TestCase
+use Go\ParserReflection\ReflectionFile;
+use Go\ParserReflection\ReflectionFunction;
+
+class ReflectionFunctionTest extends TestCaseBase
 {
-    const STUB_FILE55 = '/Stub/FileWithFunctions55.php';
-    const STUB_FILE70 = '/Stub/FileWithFunctions70.php';
+    const STUB_FILE55 = '/FileWithFunctions55.php';
+    const STUB_FILE70 = '/FileWithFunctions70.php';
 
     /**
      * @var ReflectionFile
@@ -13,7 +16,7 @@ class ReflectionFunctionTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $fileName = stream_resolve_include_path(__DIR__ . self::STUB_FILE55);
+        $fileName = stream_resolve_include_path($this->getStubDir() . self::STUB_FILE55);
 
         $reflectionFile = new ReflectionFile($fileName);
         $this->parsedRefFile = $reflectionFile;
@@ -74,7 +77,7 @@ class ReflectionFunctionTest extends \PHPUnit_Framework_TestCase
 
     public function testGetClosureMethod()
     {
-        $fileNamespace = $this->parsedRefFile->getFileNamespace('Go\ParserReflection\Stub');
+        $fileNamespace = $this->parsedRefFile->getFileNamespace($this->getStubNamespace());
         $refFunc       = $fileNamespace->getFunction('noGeneratorFunc');
         $closure       = $refFunc->getClosure();
 
@@ -85,7 +88,7 @@ class ReflectionFunctionTest extends \PHPUnit_Framework_TestCase
 
     public function testInvokeMethod()
     {
-        $fileNamespace = $this->parsedRefFile->getFileNamespace('Go\ParserReflection\Stub');
+        $fileNamespace = $this->parsedRefFile->getFileNamespace($this->getStubNamespace());
         $refFunc       = $fileNamespace->getFunction('funcWithReturnArgs');
         $retValue      = $refFunc->invoke(1, 2, 3);
         $this->assertEquals([1, 2, 3], $retValue);
@@ -93,7 +96,7 @@ class ReflectionFunctionTest extends \PHPUnit_Framework_TestCase
 
     public function testInvokeArgsMethod()
     {
-        $fileNamespace = $this->parsedRefFile->getFileNamespace('Go\ParserReflection\Stub');
+        $fileNamespace = $this->parsedRefFile->getFileNamespace($this->getStubNamespace());
         $refFunc       = $fileNamespace->getFunction('funcWithReturnArgs');
         $retValue      = $refFunc->invokeArgs([1, 2, 3]);
         $this->assertEquals([1, 2, 3], $retValue);
@@ -105,7 +108,7 @@ class ReflectionFunctionTest extends \PHPUnit_Framework_TestCase
             $this->markTestSkipped('Test available only for PHP7.0 and newer');
         }
 
-        $fileName = stream_resolve_include_path(__DIR__ . self::STUB_FILE70);
+        $fileName = stream_resolve_include_path($this->getStubDir() . self::STUB_FILE70);
 
         $reflectionFile = new ReflectionFile($fileName);
         include $fileName;
