@@ -1,5 +1,7 @@
 <?php
-namespace Go\ParserReflection\Locator;
+namespace Go\ParserReflection\Testing\Tests\Locator;
+
+use Go\ParserReflection\Locator\CallableLocator;
 
 class CallableLocatorTest extends \PHPUnit_Framework_TestCase
 {

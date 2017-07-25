@@ -9,7 +9,7 @@
          processIsolation="false"
          stopOnFailure="false"
          syntaxCheck="false"
-         bootstrap="./tests/bootstrap.php"
+         bootstrap="./testing/bootstrap.php"
         >
     <php>
         <!--Path to the autoload file that should be used. Use a composer autoloader by default-->
@@ -18,13 +18,14 @@
 
     <testsuites>
         <testsuite name="Parser Reflection Test Suite">
-            <directory>./tests/</directory>
+            <directory>./testing/</directory>
         </testsuite>
     </testsuites>
 
     <filter>
         <whitelist>
             <directory>./src/</directory>
+            <directory>./testing/Support/</directory>
         </whitelist>
     </filter>
 

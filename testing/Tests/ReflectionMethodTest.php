@@ -1,7 +1,11 @@
 <?php
-namespace Go\ParserReflection;
+namespace Go\ParserReflection\Testing\Tests;
 
-class ReflectionMethodTest extends AbstractTestCase
+use Go\ParserReflection\ReflectionEngine;
+use Go\ParserReflection\ReflectionFile;
+use Go\ParserReflection\ReflectionClass;
+
+class ReflectionMethodTest extends AbstractClassTestCaseBase
 {
     protected static $reflectionClassToTest = \ReflectionMethod::class;
 
