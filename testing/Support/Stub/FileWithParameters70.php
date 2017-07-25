@@ -8,7 +8,7 @@
  * with this source code in the file LICENSE.
  */
 
-namespace Go\ParserReflection\Stub;
+namespace Go\ParserReflection\Testing\Support\Stub;
 
 function miscScalarParameters(
     int $acceptsInteger,

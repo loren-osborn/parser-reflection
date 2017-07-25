@@ -13,7 +13,7 @@ namespace {
     }
 }
 
-namespace Go\ParserReflection\Stub {
+namespace Go\ParserReflection\Testing\Support\Stub {
 
     use Go\ParserReflection\ReflectionParameter;
 
