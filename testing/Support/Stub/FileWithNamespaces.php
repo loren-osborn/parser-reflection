@@ -3,7 +3,7 @@
 /**
  * Namespace documentation block
  */
-namespace Go\ParserReflection\Stub
+namespace Go\ParserReflection\Testing\Support\Stub
 {
     const START_MARKER = __LINE__; // Do not move it anywhere
 

@@ -1,12 +1,15 @@
 <?php
-namespace Go\ParserReflection;
+namespace Go\ParserReflection\Testing\Tests;
 
 use Stub\Issue44\Locator;
+use Go\ParserReflection\ReflectionEngine;
+use Go\ParserReflection\ReflectionFile;
+use Go\ParserReflection\ReflectionFileNamespace;
 
-class ReflectionFileTest extends \PHPUnit_Framework_TestCase
+class ReflectionFileTest extends TestCaseBase
 {
-    const STUB_FILE        = '/Stub/FileWithNamespaces.php';
-    const STUB_GLOBAL_FILE = '/Stub/FileWithGlobalNamespace.php';
+    const STUB_FILE        = '/FileWithNamespaces.php';
+    const STUB_GLOBAL_FILE = '/FileWithGlobalNamespace.php';
 
     /**
      * @var ReflectionFile
@@ -15,7 +18,7 @@ class ReflectionFileTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $fileName       = stream_resolve_include_path(__DIR__ . self::STUB_FILE);
+        $fileName       = stream_resolve_include_path($this->getStubDir() . self::STUB_FILE);
         $reflectionFile = new ReflectionFile($fileName);
 
         $this->parsedRefFile = $reflectionFile;
@@ -42,7 +45,7 @@ class ReflectionFileTest extends \PHPUnit_Framework_TestCase
     public function testGetName()
     {
         $fileName     = $this->parsedRefFile->getName();
-        $expectedName = stream_resolve_include_path(__DIR__ . self::STUB_FILE);
+        $expectedName = stream_resolve_include_path($this->getStubDir() . self::STUB_FILE);
         $this->assertEquals($expectedName, $fileName);
     }
 
@@ -54,7 +57,7 @@ class ReflectionFileTest extends \PHPUnit_Framework_TestCase
 
     public function testGetFileNamespace()
     {
-        $reflectionFileNamespace = $this->parsedRefFile->getFileNamespace('Go\ParserReflection\Stub');
+        $reflectionFileNamespace = $this->parsedRefFile->getFileNamespace($this->getStubNamespace());
         $this->assertInstanceOf(ReflectionFileNamespace::class, $reflectionFileNamespace);
 
         $reflectionFileNamespace = $this->parsedRefFile->getFileNamespace('Unknown');
@@ -63,7 +66,7 @@ class ReflectionFileTest extends \PHPUnit_Framework_TestCase
 
     public function testHasFileNamespace()
     {
-        $hasFileNamespace = $this->parsedRefFile->hasFileNamespace('Go\ParserReflection\Stub');
+        $hasFileNamespace = $this->parsedRefFile->hasFileNamespace($this->getStubNamespace());
         $this->assertTrue($hasFileNamespace);
 
         $hasFileNamespace = $this->parsedRefFile->hasFileNamespace('Unknown');
@@ -72,7 +75,7 @@ class ReflectionFileTest extends \PHPUnit_Framework_TestCase
 
     public function testGetGlobalFileNamespace()
     {
-        $fileName       = stream_resolve_include_path(__DIR__ . self::STUB_GLOBAL_FILE);
+        $fileName       = stream_resolve_include_path($this->getStubDir() . self::STUB_GLOBAL_FILE);
         $reflectionFile = new ReflectionFile($fileName);
 
         $reflectionFileNamespace = $reflectionFile->getFileNamespace('');
@@ -89,7 +92,7 @@ class ReflectionFileTest extends \PHPUnit_Framework_TestCase
      */
     public function testIsStrictType($fileName, $shouldBeStrict)
     {
-        $fileName       = stream_resolve_include_path(__DIR__ . $fileName);
+        $fileName       = stream_resolve_include_path($this->getStubDir() . $fileName);
         $reflectionFile = new ReflectionFile($fileName);
 
         $this->assertSame($shouldBeStrict, $reflectionFile->isStrictMode());
@@ -98,18 +101,18 @@ class ReflectionFileTest extends \PHPUnit_Framework_TestCase
     public function fileNameProvider()
     {
         return [
-            '/Stub/FileWithClasses56.php'       => ['/Stub/FileWithClasses56.php', false],
-            '/Stub/FileWithClasses70.php'       => ['/Stub/FileWithClasses70.php', false],
-            '/Stub/FileWithClasses71.php'       => ['/Stub/FileWithClasses71.php', true],
-            '/Stub/FileWithGlobalNamespace.php' => ['/Stub/FileWithGlobalNamespace.php', true],
+            '/Stub/FileWithClasses56.php'       => ['/FileWithClasses56.php', false],
+            '/Stub/FileWithClasses70.php'       => ['/FileWithClasses70.php', false],
+            '/Stub/FileWithClasses71.php'       => ['/FileWithClasses71.php', true],
+            '/Stub/FileWithGlobalNamespace.php' => ['/FileWithGlobalNamespace.php', true],
         ];
     }
 
     public function testGetInterfaceNamesWithExtends()
     {
-        $fileName = __DIR__ . '/Stub/Issue44/ClassWithoutNamespace.php';
+        $fileName = $this->getStubDir() . '/Issue44/ClassWithoutNamespace.php';
 
-        require_once __DIR__ . '/Stub/Issue44/Locator.php';
+        require_once $this->getStubDir() . '/Issue44/Locator.php';
         ReflectionEngine::init(new Locator());
 
         $reflectedFile = new ReflectionFile($fileName);

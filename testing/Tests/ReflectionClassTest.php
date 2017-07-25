@@ -1,14 +1,17 @@
 <?php
-namespace Go\ParserReflection;
+namespace Go\ParserReflection\Testing\Tests;
 
-use Go\ParserReflection\Stub\ClassWithConstantsAndInheritance;
-use Go\ParserReflection\Stub\ClassWithMethodsAndProperties;
-use Go\ParserReflection\Stub\ClassWithScalarConstants;
-use Go\ParserReflection\Stub\FinalClass;
-use Go\ParserReflection\Stub\ImplicitAbstractClass;
-use Go\ParserReflection\Stub\SimpleAbstractInheritance;
+use Go\ParserReflection\Testing\Support\Stub\ClassWithConstantsAndInheritance;
+use Go\ParserReflection\Testing\Support\Stub\ClassWithMethodsAndProperties;
+use Go\ParserReflection\Testing\Support\Stub\ClassWithScalarConstants;
+use Go\ParserReflection\Testing\Support\Stub\FinalClass;
+use Go\ParserReflection\Testing\Support\Stub\ImplicitAbstractClass;
+use Go\ParserReflection\Testing\Support\Stub\SimpleAbstractInheritance;
+use Go\ParserReflection\ReflectionEngine;
+use Go\ParserReflection\ReflectionFile;
+use Go\ParserReflection\ReflectionClass;
 
-class ReflectionClassTest extends AbstractTestCase
+class ReflectionClassTest extends AbstractClassTestCaseBase
 {
     /**
      * Name of the class to compare

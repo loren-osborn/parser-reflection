@@ -1,6 +1,6 @@
 <?php
 
-namespace Go\ParserReflection\Stub;
+namespace Go\ParserReflection\Testing\Support\Stub;
 
 class ClassWithArrayConstants
 {

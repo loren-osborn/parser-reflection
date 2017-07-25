@@ -1,10 +1,14 @@
 <?php
-namespace Go\ParserReflection;
+namespace Go\ParserReflection\Testing\Tests;
 
-use Go\ParserReflection\Stub\ClassWithProperties;
+use Go\ParserReflection\Testing\Support\Stub\ClassWithProperties;
+use Go\ParserReflection\ReflectionEngine;
+use Go\ParserReflection\ReflectionFile;
+use Go\ParserReflection\ReflectionClass;
+use Go\ParserReflection\ReflectionProperty;
 use PhpParser\Lexer;
 
-class ReflectionPropertyTest extends AbstractTestCase
+class ReflectionPropertyTest extends AbstractClassTestCaseBase
 {
     /**
      * Class to test
