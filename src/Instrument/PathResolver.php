@@ -48,6 +48,24 @@ class PathResolver
             return $fastPath;
         }
 
+        /*
+        $isAbsUnixPath             = !$pathScheme && ($path[0] === '/');
+        $isAbsWindowsPath          = !$pathScheme && ($path[1] === ':') && ($path[2] === '\\');
+        $isAbsolute                = $pathScheme || $isAbsUnixPath || $isAbsWindowsPath;
+        $isRelativeToSpecificDrive = !$isAbsolute && ($path[1] === ':');
+        $isRelativeToCurrentDrive  = !$isAbsolute && ($path[0] === '\\');
+        $isRelativeToCwd           = !$isAbsolute && !$isRelativeToSpecificDrive && !$isRelativeToCurrentDrive;
+        if ($isRelativeToSpecificDrive) {
+            $path = realpath($path[0] . ':.') . DIRECTORY_SEPARATOR . $path;
+        }
+        else if ($isRelativeToCurrentDrive) {
+            $path = getenv('SystemDrive') . $path;
+        }
+        else if ($isRelativeToCwd) {
+            $path = getcwd() . DIRECTORY_SEPARATOR . $path;
+        }
+        */
+
         $isRelative = !$pathScheme && ($path[0] !== '/') && ($path[1] !== ':');
         if ($isRelative) {
             $path = getcwd() . DIRECTORY_SEPARATOR . $path;
