@@ -264,3 +264,18 @@ trait TraitWithProperties
     protected static $bs = __TRAIT__;
     public static $cs = 'foo';
 }
+
+class SomeCustomDateTime extends \DateTime
+{
+    public function customPublicFooMethod($a, $b)
+    {
+    }
+
+    protected function customProtectedBarMethod(\Closure $c)
+    {
+    }
+
+    private function customPrivateBazMethod()
+    {
+    }
+}
