@@ -312,6 +312,11 @@ class ReflectionMethod extends BaseReflectionMethod
         return $methods;
     }
 
+    public function getExtension()
+    {
+        return $this->getDeclaringClass()->getExtension();
+    }
+
     /**
      * Implementation of internal reflection initialization
      *

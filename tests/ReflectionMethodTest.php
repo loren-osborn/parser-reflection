@@ -76,16 +76,15 @@ class ReflectionMethodTest extends AbstractTestCase
         $className    = $parsedClass->getName();
         $parsedMethod = $parsedClass->getMethod($methodName);
         if (empty($parsedMethod)) {
-            echo "Couldn't find method $methodName in the $className", PHP_EOL;
-            return;
+            $this->fail("Couldn't find method $methodName in the $className");
         }
 
         $expectedValue = $refMethod->$getterName();
         $actualValue   = $parsedMethod->$getterName();
-        $this->assertSame(
+        $this->assertRefelctorValueSame(
             $expectedValue,
             $actualValue,
-            "$getterName() for method $className->$methodName() should be equal"
+            get_class($parsedMethod) . "->$getterName() for method $className->$methodName() should be equal\nexpected: " . $this->getStringificationOf($expectedValue) . "\nactual: " . $this->getStringificationOf($actualValue)
         );
     }
 
