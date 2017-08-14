@@ -14,11 +14,12 @@
       "Go\\ParserReflection\\": "src"
     },
     "files": ["src/bootstrap.php"],
-    "exclude-from-classmap": ["/testing/"]
+    "exclude-from-classmap": ["testing/Support/Stubs"]
   },
   "autoload-dev": {
     "psr-4": {
-      "Go\\ParserReflection\\Testing\\": "testing"
+      "Go\\ParserReflection\\TestingSupport\\": "testing/support",
+      "Go\\ParserReflection\\Tests\\": "testing/tests"
     }
   },
   "require": {
