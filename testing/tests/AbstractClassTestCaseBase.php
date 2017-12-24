@@ -15,6 +15,8 @@ use Go\ParserReflection\ReflectionFile;
 
 abstract class AbstractClassTestCaseBase extends TestCaseBase
 {
+    const DEFAULT_STUB_FILENAME = 'FileWithClasses55.php';
+
     /**
      * @var ReflectionFileNamespace
      */
@@ -111,6 +113,6 @@ abstract class AbstractClassTestCaseBase extends TestCaseBase
 
     protected function setUp()
     {
-        $this->setUpFile($this->getStubDir() . '/FileWithClasses55.php');
+        $this->setUpFile($this->getStubDir() . '/' . self::DEFAULT_STUB_FILENAME);
     }
 }
