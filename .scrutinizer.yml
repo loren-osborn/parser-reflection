@@ -11,24 +11,24 @@ tools:
         config:
             standard: PSR2
         filter:
-            paths: ["src/*", "testing/*"]
+            paths: ["src/*", "test/*"]
     php_cpd:
         enabled: true
-        excluded_dirs: ["docs", "examples", "testing/Tests", "vendor"]
+        excluded_dirs: ["docs", "examples", "test/Tests", "vendor"]
     php_cs_fixer:
         enabled: true
         config:
             level: all
         filter:
-            paths: ["src/*", "testing/*"]
+            paths: ["src/*", "test/*"]
     php_loc:
         enabled: true
-        excluded_dirs: ["docs", "examples", "testing/Tests", "vendor"]
+        excluded_dirs: ["docs", "examples", "test/Tests", "vendor"]
     php_pdepend:
         enabled: true
-        excluded_dirs: ["docs", "examples", "testing/Tests", "vendor"]
+        excluded_dirs: ["docs", "examples", "test/Tests", "vendor"]
     php_analyzer:
         enabled: true
         filter:
-            paths: ["src/*", "testing/*"]
+            paths: ["src/*", "test/*"]
     sensiolabs_security_checker: true
