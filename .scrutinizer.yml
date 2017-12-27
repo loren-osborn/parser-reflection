@@ -14,7 +14,7 @@ tools:
             paths: ["src/*", "test/*"]
     php_cpd:
         enabled: true
-        excluded_dirs: ["docs", "examples", "test/Tests", "vendor"]
+        excluded_dirs: ["docs", "examples", "test/tests", "vendor"]
     php_cs_fixer:
         enabled: true
         config:
@@ -23,10 +23,10 @@ tools:
             paths: ["src/*", "test/*"]
     php_loc:
         enabled: true
-        excluded_dirs: ["docs", "examples", "test/Tests", "vendor"]
+        excluded_dirs: ["docs", "examples", "test/tests", "vendor"]
     php_pdepend:
         enabled: true
-        excluded_dirs: ["docs", "examples", "test/Tests", "vendor"]
+        excluded_dirs: ["docs", "examples", "test/tests", "vendor"]
     php_analyzer:
         enabled: true
         filter:
