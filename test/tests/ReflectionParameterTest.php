@@ -6,10 +6,16 @@ use Go\ParserReflection\TestingSupport\Stubs\SubFoo;
 use Go\ParserReflection\ReflectionEngine;
 use Go\ParserReflection\ReflectionFile;
 use Go\ParserReflection\ReflectionParameter;
+use Go\ParserReflection\ReflectionFunction;
 use TestParametersForRootNsClass;
 
 class ReflectionParameterTest extends TestCaseBase
 {
+    /**
+     * @var string
+     */
+    protected $lastFileSetUp;
+
     /**
      * @var ReflectionFile
      */
@@ -21,11 +27,10 @@ class ReflectionParameterTest extends TestCaseBase
     }
 
     /**
-     * @dataProvider fileProvider
+     * @dataProvider functionProvider
      */
-    public function testGeneralInfoGetters($fileName)
+    public function testGeneralInfoGetters($funcName, $fileName, $origFunction)
     {
-        $this->setUpFile($fileName);
         $allNameGetters = [
             'isArray', 'isCallable', 'isOptional', 'isPassedByReference', 'isDefaultValueAvailable',
             'getPosition', 'canBePassedByValue', 'allowsNull', 'getDefaultValue', 'getDefaultValueConstantName',
@@ -41,28 +46,42 @@ class ReflectionParameterTest extends TestCaseBase
             $allNameGetters[] = 'hasType';
         }
 
-        foreach ($this->parsedRefFile->getFileNamespaces() as $fileNamespace) {
-            foreach ($fileNamespace->getFunctions() as $refFunction) {
-                $functionName = $refFunction->getName();
-                foreach ($refFunction->getParameters() as $refParameter) {
-                    $parameterName        = $refParameter->getName();
-                    $originalRefParameter = new \ReflectionParameter($functionName, $parameterName);
-                    foreach ($allNameGetters as $getterName) {
+        if ($fileName) {
+            $this->setUpFile($fileName);
+            $fileNamespace = $this->parsedRefFile->getFileNamespace(
+                $this->getNamespaceFromName($funcName));
+            $refFunction   = $fileNamespace->getFunction(
+                $this->getShortNameFromName($funcName));
+        } else {
+            $this->lastFileSetUp = null;
+            $this->parsedRefFile = null;
+            $refFunction = new ReflectionFunction($funcName);
+        }
+        $functionName  = $refFunction->getName();
+        $comparisonTransformer = 'strval';
+        if (preg_match('/\\bNeverIncluded\\b/', $functionName)) {
+            $comparisonTransformer = (function ($inStr) {
+                return preg_replace(',([/\\\\])Stub\\b,', '\\1Stub\\1NeverIncluded', $inStr);
+            });
+        }
+        foreach ($refFunction->getParameters() as $refParameter) {
+            $parameterName        = $refParameter->getName();
+            $originalRefParameter = new \ReflectionParameter($origFunction, $parameterName);
+            foreach ($allNameGetters as $getterName) {
 
-                        // skip some methods if there is no default value
-                        $isDefaultValueAvailable = $originalRefParameter->isDefaultValueAvailable();
-                        if (isset($onlyWithDefaultValues[$getterName]) && !$isDefaultValueAvailable) {
-                            continue;
-                        }
-                        $expectedValue = $originalRefParameter->$getterName();
-                        $actualValue   = $refParameter->$getterName();
-                        $this->assertSame(
-                            $expectedValue,
-                            $actualValue,
-                            "{$getterName}() for parameter {$functionName}:{$parameterName} should be equal"
-                        );
-                    }
+                // skip some methods if there is no default value
+                $isDefaultValueAvailable = $originalRefParameter->isDefaultValueAvailable();
+                if (isset($onlyWithDefaultValues[$getterName]) && !$isDefaultValueAvailable) {
+                    continue;
                 }
+                $expectedValue = $originalRefParameter->$getterName();
+                $actualValue   = $refParameter->$getterName();
+                $this->assertReflectorValueSame(
+                    $expectedValue,
+                    $actualValue,
+                    "{$getterName}() for parameter {$functionName}:{$parameterName} should be equal",
+                    $comparisonTransformer
+                );
             }
         }
     }
@@ -84,6 +103,58 @@ class ReflectionParameterTest extends TestCaseBase
         }
 
         return $files;
+    }
+
+    /**
+     * Provides a list of functions for analysis in the form [Function, FileName]
+     *
+     * @return array
+     */
+    public function functionProvider()
+    {
+        // Random selection of built in functions.
+        $builtInFunctions = ['preg_match', 'date', 'create_function'];
+        $functions = [];
+        foreach ($builtInFunctions as $functionsName) {
+            $functions[$functionsName] = [
+                'function'     => $functionsName,
+                'fileName'     => null,
+                'origFunction' => $functionsName,
+            ];
+        }
+        $files = $this->fileProvider();
+        foreach ($files as $filenameArgList) {
+            $argKeys = array_keys($filenameArgList);
+            $fileName = $filenameArgList[$argKeys[0]];
+            $resolvedFileName = stream_resolve_include_path($fileName);
+            $fileNode = ReflectionEngine::parseFile($resolvedFileName);
+            list($fakeFileName, $funcNameFilter) = $this->getNeverIncludedFileFilter($resolvedFileName);
+            $realAndFake = [
+                'real' => ['file' => $resolvedFileName, 'funcNameFilter' => 'strval'       ],
+                'fake' => ['file' => $fakeFileName,     'funcNameFilter' => $funcNameFilter],
+            ];
+
+            $reflectionFile = new ReflectionFile($resolvedFileName, $fileNode);
+            foreach ($reflectionFile->getFileNamespaces() as $fileNamespace) {
+                foreach ($fileNamespace->getFunctions() as $parsedFunction) {
+                    foreach ($realAndFake as $funcFaker) {
+                        $funcNameFilter = $funcFaker['funcNameFilter'];
+                        if (
+                            ($funcNameFilter === 'strval') ||
+                            ($funcNameFilter($parsedFunction->getName()) != $parsedFunction->getName())
+                        ) {
+                            $functions[$argKeys[0] . ': ' . $funcNameFilter($parsedFunction->getName())] = [
+                                'function'     => $funcNameFilter($parsedFunction->getName()),
+                                'fileName'     => $funcFaker['file'],
+                                'origFunction' => $parsedFunction->getName(),
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+
+        return $functions;
     }
 
     public function testGetClassMethod()
@@ -302,12 +373,20 @@ class ReflectionParameterTest extends TestCaseBase
      */
     private function setUpFile($fileName)
     {
-        $fileName = stream_resolve_include_path($fileName);
-        $fileNode = ReflectionEngine::parseFile($fileName);
+        $resolvedFileName = stream_resolve_include_path($fileName);
+        if ($resolvedFileName) {
+            $fileName = $resolvedFileName;
+        }
+        if ($this->lastFileSetUp !== $fileName) {
+            $fileNode = ReflectionEngine::parseFile($fileName);
 
-        $reflectionFile = new ReflectionFile($fileName, $fileNode);
-        $this->parsedRefFile = $reflectionFile;
+            $reflectionFile = new ReflectionFile($fileName, $fileNode);
+            $this->parsedRefFile = $reflectionFile;
 
-        include_once $fileName;
+            if ($resolvedFileName) {
+                include_once $fileName;
+            }
+            $this->lastFileSetUp = $fileName;
+        }
     }
 }

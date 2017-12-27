@@ -12,6 +12,7 @@ namespace Go\ParserReflection\Traits;
 
 use Go\ParserReflection\ReflectionClass;
 use Go\ParserReflection\ReflectionException;
+use Go\ParserReflection\ReflectionExtension;
 use Go\ParserReflection\ReflectionMethod;
 use Go\ParserReflection\ReflectionProperty;
 use Go\ParserReflection\ValueResolver\NodeExpressionResolver;
@@ -208,10 +209,15 @@ trait ReflectionClassLikeTrait
     public function getConstants()
     {
         if (!isset($this->constants)) {
-            $this->constants = $this->recursiveCollect(function (array &$result, \ReflectionClass $instance) {
-                $result += $instance->getConstants();
-            });
-            $this->collectSelfConstants();
+            if ($this->classLikeNode) {
+                $this->constants = $this->recursiveCollect(function (array &$result, \ReflectionClass $instance) {
+                    $result += $instance->getConstants();
+                });
+                $this->collectSelfConstants();
+            } else {
+                $this->initializeInternalReflection();
+                $this->constants = parent::getConstants();
+            }
         }
 
         return $this->constants;
@@ -240,6 +246,11 @@ trait ReflectionClassLikeTrait
      */
     public function getDefaultProperties()
     {
+        if (!$this->classLikeNode) {
+            // This handles differences in access control permissions.
+            $this->initializeInternalReflection();
+            return parent::getDefaultProperties();
+        }
         $defaultValues = [];
         $properties    = $this->getProperties();
         $staticOrder   = [true, false];
@@ -270,6 +281,10 @@ trait ReflectionClassLikeTrait
      */
     public function getDocComment()
     {
+        if (!$this->classLikeNode) {
+            $this->initializeInternalReflection();
+            return parent::getDocComment();
+        }
         $docComment = $this->classLikeNode->getDocComment();
 
         return $docComment ? $docComment->getText() : false;
@@ -277,21 +292,43 @@ trait ReflectionClassLikeTrait
 
     public function getEndLine()
     {
+        if (!$this->classLikeNode) {
+            $this->initializeInternalReflection();
+            return parent::getEndLine();
+        }
         return $this->classLikeNode->getAttribute('endLine');
     }
 
     public function getExtension()
     {
-        return null;
+        $extName = $this->getExtensionName();
+        if (!$extName) {
+            return null;
+        }
+        // The purpose of Go\ParserReflection\ReflectionExtension is
+        // to behave exactly like \ReflectionExtension, but return
+        // Go\ParserReflection\ReflectionFunction and
+        // Go\ParserReflection\ReflectionClass where apropriate.
+        return new ReflectionExtension($extName);
     }
 
     public function getExtensionName()
     {
+        if (!$this->classLikeNode) {
+            $this->initializeInternalReflection();
+            return parent::getExtensionName();
+        }
         return false;
     }
 
     public function getFileName()
     {
+        if (!$this->classLikeNode) {
+            // If we got here, we're probably a built-in class, and filename
+            // is probably false.
+            $this->initializeInternalReflection();
+            return parent::getFileName();
+        }
         return $this->classLikeNode->getAttribute('fileName');
     }
 
@@ -309,12 +346,22 @@ trait ReflectionClassLikeTrait
     public function getInterfaces()
     {
         if (!isset($this->interfaceClasses)) {
-            $this->interfaceClasses = $this->recursiveCollect(function (array &$result, \ReflectionClass $instance) {
-                if ($instance->isInterface()) {
-                    $result[$instance->name] = $instance;
+            if ($this->classLikeNode) {
+                $this->interfaceClasses = $this->recursiveCollect(function (array &$result, \ReflectionClass $instance) {
+                    if ($instance->isInterface()) {
+                        $result[$instance->name] = $instance;
+                    }
+                    $result += $instance->getInterfaces();
+                });
+            } else {
+                $this->initializeInternalReflection();
+                // We need the native implementation of getInterfaceNames() here.
+                $parentInterfaceNames   = parent::getInterfaceNames();
+                $this->interfaceClasses = [];
+                foreach ($parentInterfaceNames as $interfaceName) {
+                    $this->interfaceClasses[$interfaceName] = new ReflectionClass($interfaceName);
                 }
-                $result += $instance->getInterfaces();
-            });
+            }
         }
 
         return $this->interfaceClasses;
@@ -346,19 +393,31 @@ trait ReflectionClassLikeTrait
     public function getMethods($filter = null)
     {
         if (!isset($this->methods)) {
-            $directMethods = ReflectionMethod::collectFromClassNode($this->classLikeNode, $this);
-            $parentMethods = $this->recursiveCollect(function (array &$result, \ReflectionClass $instance, $isParent) {
-                $reflectionMethods = [];
-                foreach ($instance->getMethods() as $reflectionMethod) {
-                    if (!$isParent || !$reflectionMethod->isPrivate()) {
-                        $reflectionMethods[$reflectionMethod->name] = $reflectionMethod;
+            if ($this->classLikeNode) {
+                $directMethods = ReflectionMethod::collectFromClassNode($this->classLikeNode, $this);
+                $parentMethods = $this->recursiveCollect(function (array &$result, \ReflectionClass $instance, $isParent) {
+                    $reflectionMethods = [];
+                    foreach ($instance->getMethods() as $reflectionMethod) {
+                        if (!$isParent || !$reflectionMethod->isPrivate()) {
+                            $reflectionMethods[$reflectionMethod->name] = $reflectionMethod;
+                        }
                     }
-                }
-                $result += $reflectionMethods;
-            });
-            $methods = $directMethods + $parentMethods;
+                    $result += $reflectionMethods;
+                });
+                $methods = $directMethods + $parentMethods;
 
-            $this->methods = $methods;
+                $this->methods = $methods;
+            } else {
+                $this->initializeInternalReflection();
+                $methodRefs = parent::getMethods();
+                $this->methods = [];
+                foreach ($methodRefs as $reflectionMethod) {
+                    $this->methods[$reflectionMethod->getName()] = new ReflectionMethod(
+                        $this->getName(),
+                        $reflectionMethod->getName()
+                    );
+                }
+            }
         }
         if (!isset($filter)) {
             return array_values($this->methods);
@@ -386,6 +445,10 @@ trait ReflectionClassLikeTrait
      */
     public function getModifiers()
     {
+        if (!$this->classLikeNode) {
+            $this->initializeInternalReflection();
+            return parent::getModifiers();
+        }
         $modifiers = 0;
 
         if ($this->isFinal()) {
@@ -438,14 +501,23 @@ trait ReflectionClassLikeTrait
         if (!isset($this->parentClass)) {
             static $extendsField = 'extends';
 
-            $parentClass = false;
-            $hasExtends  = in_array($extendsField, $this->classLikeNode->getSubNodeNames());
-            $extendsNode = $hasExtends ? $this->classLikeNode->$extendsField : null;
-            if ($extendsNode instanceof FullyQualified) {
-                $extendsName = $extendsNode->toString();
-                $parentClass = $this->createReflectionForClass($extendsName);
+            if ($this->classLikeNode) {
+                $parentClass = false;
+                $hasExtends  = in_array($extendsField, $this->classLikeNode->getSubNodeNames());
+                $extendsNode = $hasExtends ? $this->classLikeNode->$extendsField : null;
+                if ($extendsNode instanceof FullyQualified) {
+                    $extendsName = $extendsNode->toString();
+                    $parentClass = new ReflectionClass($extendsName);
+                }
+                $this->parentClass = $parentClass;
+            } else {
+                $this->initializeInternalReflection();
+                $nativeRefParentClass = parent::getParentClass();
+                if (!$nativeRefParentClass) {
+                    return false;
+                }
+                $this->parentClass = new ReflectionClass($nativeRefParentClass->getName());
             }
-            $this->parentClass = $parentClass;
         }
 
         return $this->parentClass;
@@ -462,19 +534,31 @@ trait ReflectionClassLikeTrait
     public function getProperties($filter = null)
     {
         if (!isset($this->properties)) {
-            $directProperties = ReflectionProperty::collectFromClassNode($this->classLikeNode, $this->getName());
-            $parentProperties = $this->recursiveCollect(function (array &$result, \ReflectionClass $instance, $isParent) {
-                $reflectionProperties = [];
-                foreach ($instance->getProperties() as $reflectionProperty) {
-                    if (!$isParent || !$reflectionProperty->isPrivate()) {
-                        $reflectionProperties[$reflectionProperty->name] = $reflectionProperty;
+            if ($this->classLikeNode) {
+                $directProperties = ReflectionProperty::collectFromClassNode($this->classLikeNode, $this->getName());
+                $parentProperties = $this->recursiveCollect(function (array &$result, \ReflectionClass $instance, $isParent) {
+                    $reflectionProperties = [];
+                    foreach ($instance->getProperties() as $reflectionProperty) {
+                        if (!$isParent || !$reflectionProperty->isPrivate()) {
+                            $reflectionProperties[$reflectionProperty->name] = $reflectionProperty;
+                        }
                     }
-                }
-                $result += $reflectionProperties;
-            });
-            $properties = $directProperties + $parentProperties;
+                    $result += $reflectionProperties;
+                });
+                $properties = $directProperties + $parentProperties;
 
-            $this->properties = $properties;
+                $this->properties = $properties;
+            } else {
+                $this->initializeInternalReflection();
+                $propertyRefs = parent::getProperties();
+                $this->properties = [];
+                foreach ($propertyRefs as $eachProperty) {
+                    $this->properties[$eachProperty->getName()] = new ReflectionProperty(
+                        $this->getName(),
+                        $eachProperty->getName()
+                    );
+                }
+            }
         }
 
         // Without filter we can just return the full list
@@ -518,6 +602,10 @@ trait ReflectionClassLikeTrait
 
     public function getStartLine()
     {
+        if (!$this->classLikeNode) {
+            $this->initializeInternalReflection();
+            return parent::getStartLine();
+        }
         return $this->classLikeNode->getAttribute('startLine');
     }
 
@@ -531,6 +619,10 @@ trait ReflectionClassLikeTrait
      */
     public function getTraitAliases()
     {
+        if (!$this->classLikeNode) {
+            $this->initializeInternalReflection();
+            return parent::getTraitAliases();
+        }
         $aliases = [];
         $traits  = $this->getTraits();
         foreach ($this->traitAdaptations as $adaptation) {
@@ -572,9 +664,18 @@ trait ReflectionClassLikeTrait
     public function getTraits()
     {
         if (!isset($this->traits)) {
-            $traitAdaptations = [];
-            $this->traits     = ReflectionClass::collectTraitsFromClassNode($this->classLikeNode, $traitAdaptations);
-            $this->traitAdaptations = $traitAdaptations;
+            if ($this->classLikeNode) {
+                $traitAdaptations = [];
+                $this->traits     = ReflectionClass::collectTraitsFromClassNode($this->classLikeNode, $traitAdaptations);
+                $this->traitAdaptations = $traitAdaptations;
+            } else {
+                $this->initializeInternalReflection();
+                $nativeTraitRefs = parent::getTraits();
+                $this->traits = [];
+                foreach ($nativeTraitRefs as $eachTrait) {
+                    $this->traits[$eachTrait->getName()] = new ReflectionClass($eachTrait->getName());
+                }
+            }
         }
 
         return $this->traits;
@@ -646,6 +747,10 @@ trait ReflectionClassLikeTrait
      */
     public function isAbstract()
     {
+        if (!$this->classLikeNode) {
+            $this->initializeInternalReflection();
+            return parent::isAbstract();
+        }
         if ($this->classLikeNode instanceof Class_ && $this->classLikeNode->isAbstract()) {
             return true;
         } elseif ($this->isInterface() && !empty($this->getMethods())) {
@@ -686,6 +791,10 @@ trait ReflectionClassLikeTrait
      */
     public function isFinal()
     {
+        if (!$this->classLikeNode) {
+            $this->initializeInternalReflection();
+            return parent::isFinal();
+        }
         $isFinal = $this->classLikeNode instanceof Class_ && $this->classLikeNode->isFinal();
 
         return $isFinal;
@@ -725,6 +834,10 @@ trait ReflectionClassLikeTrait
      */
     public function isInterface()
     {
+        if (!$this->classLikeNode) {
+            $this->initializeInternalReflection();
+            return parent::isInterface();
+        }
         return ($this->classLikeNode instanceof Interface_);
     }
 
@@ -733,7 +846,10 @@ trait ReflectionClassLikeTrait
      */
     public function isInternal()
     {
-        // never can be an internal method
+        if (!$this->classLikeNode) {
+            $this->initializeInternalReflection();
+            return parent::isInternal();
+        }
         return false;
     }
 
@@ -750,6 +866,10 @@ trait ReflectionClassLikeTrait
      */
     public function isSubclassOf($class)
     {
+        if (!$this->classLikeNode) {
+            $this->initializeInternalReflection();
+            return parent::isSubclassOf($class);
+        }
         if (is_object($class)) {
             if ($class instanceof ReflectionClass) {
                 $class = $class->name;
@@ -777,6 +897,10 @@ trait ReflectionClassLikeTrait
      */
     public function isTrait()
     {
+        if (!$this->classLikeNode) {
+            $this->initializeInternalReflection();
+            return parent::isTrait();
+        }
         return ($this->classLikeNode instanceof Trait_);
     }
 
@@ -785,7 +909,10 @@ trait ReflectionClassLikeTrait
      */
     public function isUserDefined()
     {
-        // always defined by user, because we parse the source code
+        if (!$this->classLikeNode) {
+            $this->initializeInternalReflection();
+            return parent::isUserDefined();
+        }
         return true;
     }
 
@@ -799,7 +926,8 @@ trait ReflectionClassLikeTrait
     public function getStaticProperties()
     {
         // In runtime static properties can be changed in any time
-        if ($this->isInitialized()) {
+        if ($this->wasIncluded() || !$this->classLikeNode) {
+            $this->initializeInternalReflection();
             return parent::getStaticProperties();
         }
 
@@ -958,13 +1086,16 @@ trait ReflectionClassLikeTrait
     }
 
     /**
-     * Create a ReflectionClass for a given class name.
+     * Has class been loaded by PHP.
      *
-     * @param string $className
-     *     The name of the class to create a reflection for.
-     *
-     * @return ReflectionClass
-     *     The apropriate reflection object.
+     * @return bool
+     *     If class file was included.
      */
-    abstract protected function createReflectionForClass($className);
+    public function wasIncluded()
+    {
+        return
+            interface_exists($this->getName(), false) ||
+            trait_exists($this->getName(), false)     ||
+            class_exists($this->getName(), false);
+    }
 }

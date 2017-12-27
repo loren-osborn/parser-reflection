@@ -20,7 +20,7 @@ use ReflectionParameter as BaseReflectionParameter;
 /**
  * AST-based reflection for method/function parameter
  */
-class ReflectionParameter extends BaseReflectionParameter
+class ReflectionParameter extends BaseReflectionParameter implements ReflectionInterface
 {
     use InternalPropertiesEmulationTrait;
 
@@ -89,7 +89,7 @@ class ReflectionParameter extends BaseReflectionParameter
         $this->parameterIndex    = $parameterIndex;
         $this->declaringFunction = $declaringFunction;
 
-        if ($this->isDefaultValueAvailable()) {
+        if ($this->isDefaultValueSet()) {
             if ($declaringFunction instanceof \ReflectionMethod) {
                 $context = $declaringFunction->getDeclaringClass();
             } else {
@@ -165,6 +165,11 @@ class ReflectionParameter extends BaseReflectionParameter
      */
     public function allowsNull()
     {
+        // Allow builtin types to override
+        if ($this->parameterNode->getAttribute('prohibit_null', false)) {
+            return false;
+        }
+
         // Enable 7.1 nullable types support
         if ($this->parameterNode->type instanceof NullableType) {
             return true;
@@ -200,6 +205,10 @@ class ReflectionParameter extends BaseReflectionParameter
                     return $this->getDeclaringClass();
                 }
 
+                // The PHP documentation here:
+                //     http://php.net/manual/en/functions.arguments.php#functions.arguments.type-declaration
+                // seems to indicate that 'parent' is *NOT* a valid typehint.
+                // Testing PHP itself confirms that it *IS* valid.
                 if ('parent' === $parameterTypeName) {
                     return $this->getDeclaringClass()->getParentClass();
                 }
@@ -207,9 +216,8 @@ class ReflectionParameter extends BaseReflectionParameter
                 throw new ReflectionException("Can not resolve a class name for parameter");
             }
             $className   = $parameterType->toString();
-            $classOrInterfaceExists = class_exists($className, false) || interface_exists($className, false);
 
-            return $classOrInterfaceExists ? new \ReflectionClass($className) : new ReflectionClass($className);
+            return new ReflectionClass($className);
         }
 
         return null;
@@ -217,6 +225,8 @@ class ReflectionParameter extends BaseReflectionParameter
 
     /**
      * {@inheritDoc}
+     * @return ReflectionClass|null  The class of the method that declared the
+     *                                   parameter, if any.
      */
     public function getDeclaringClass()
     {
@@ -229,6 +239,7 @@ class ReflectionParameter extends BaseReflectionParameter
 
     /**
      * {@inheritDoc}
+     * @return ReflectionFunction  The function that declared the parameter.
      */
     public function getDeclaringFunction()
     {
@@ -329,7 +340,9 @@ class ReflectionParameter extends BaseReflectionParameter
      */
     public function isDefaultValueAvailable()
     {
-        return isset($this->parameterNode->default);
+        return
+            isset($this->parameterNode->default) &&
+            !($this->parameterNode->default->getAttribute('implied', false));
     }
 
     /**
@@ -345,7 +358,7 @@ class ReflectionParameter extends BaseReflectionParameter
      */
     public function isOptional()
     {
-        return $this->isVariadic() || ($this->isDefaultValueAvailable() && $this->haveSiblingsDefalutValues());
+        return $this->isVariadic() || ($this->isDefaultValueSet() && $this->haveSiblingsDefalutValues());
     }
 
     /**
@@ -365,6 +378,23 @@ class ReflectionParameter extends BaseReflectionParameter
     }
 
     /**
+     * Returns if default value set (or implied).
+     *
+     * Identical to isDefaultValueAvailable(), except it
+     * includes IMPLIED default values which:
+     *     + Only exist in builtin functions and methods.
+     *     + Only affect the optionality of a prameter, not
+     *         if a SUPPLIED parameter can have the default
+     *         value.
+     *
+     * @return bool
+     */
+    protected function isDefaultValueSet()
+    {
+        return isset($this->parameterNode->default);
+    }
+
+    /**
      * Returns if all following parameters have a default value definition.
      *
      * @return bool
@@ -380,11 +410,25 @@ class ReflectionParameter extends BaseReflectionParameter
         /** @var \ReflectionParameter[] $remainingParameters */
         $remainingParameters = array_slice($function->getParameters(), $this->parameterIndex + 1);
         foreach ($remainingParameters as $reflectionParameter) {
-            if (!$reflectionParameter->isDefaultValueAvailable()) {
+            if (!$reflectionParameter->isDefaultValueSet()) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    /**
+     * Has function or method been loaded by PHP.
+     *
+     * @return bool
+     *     If file containing this function or method was included.
+     */
+    public function wasIncluded()
+    {
+        $hintedClass      = $this->getClass();
+        $hintTypeIncluded = !$hintedClass || $hintedClass->wasIncluded();
+        $functionIncluded = $this->getDeclaringFunction()->wasIncluded();
+        return $functionIncluded && $hintTypeIncluded;
     }
 }

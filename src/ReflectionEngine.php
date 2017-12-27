@@ -12,6 +12,7 @@ namespace Go\ParserReflection;
 
 use Go\ParserReflection\Instrument\PathResolver;
 use Go\ParserReflection\NodeVisitor\RootNamespaceNormalizer;
+use Go\ParserReflection\NodeVisitor\BuiltinTypeFixer;
 use PhpParser\Lexer;
 use PhpParser\Node;
 use PhpParser\Node\Stmt\ClassLike;
@@ -81,6 +82,9 @@ class ReflectionEngine
         }
 
         self::$traverser = $traverser = new NodeTraverser();
+        // BuiltinTypeFixer is a temprary fix for a bug in PhpParser.
+        // https://github.com/nikic/PHP-Parser/issues/449
+        $traverser->addVisitor(new BuiltinTypeFixer());
         $traverser->addVisitor(new NameResolver());
         $traverser->addVisitor(new RootNamespaceNormalizer());
 
@@ -259,6 +263,57 @@ class ReflectionEngine
         }
 
         throw new ReflectionException("Namespace $namespaceName was not found in the file $fileName");
+    }
+
+    /**
+     * Parses a file namespace and returns an AST for it
+     *
+     * @param string $valueAsString Default value as PHP code.
+     *
+     * @return Namespace_
+     * @throws ReflectionException
+     */
+    public static function parseDefaultValue($valueAsString = null)
+    {
+        $codeToParse = sprintf('<?php namespace TraverserAddsOneAnyway; function foo($bar = %s) {}', $valueAsString);
+        $treeNodes   = self::$traverser->traverse(self::$parser->parse($codeToParse));
+        // The next three loops should really be just:
+        //     $paramNodes = $treeNodes[0]->stmts[0]->getParams();
+        //     return $paramNodes[0]->default;
+        // ...but the following is a much safer way to say the same thing:
+        $namespaceNode = null;
+        if (is_array($treeNodes)) {
+            foreach ($treeNodes as $node) {
+                if (!$namespaceNode               &&
+                    ($node instanceof Namespace_) &&
+                    (ltrim(strval($node->name), '\\') == 'TraverserAddsOneAnyway')
+                ) {
+                    $namespaceNode = $node;
+                }
+            }
+        }
+        $functionNode = null;
+        if ($namespaceNode && is_array($namespaceNode->stmts)) {
+            foreach ($namespaceNode->stmts as $node) {
+                if (!$functionNode               &&
+                    ($node instanceof Function_) &&
+                    ($node->name === 'foo')
+                ) {
+                    $functionNode = $node;
+                }
+            }
+        }
+        if ($functionNode && is_array($params = $functionNode->getParams())) {
+            foreach ($params as $node) {
+                if (!$functionNode                &&
+                    ($node instanceof Node\Param) &&
+                    ($node->name === 'bar')
+                ) {
+                    return $node->default;
+                }
+            }
+        }
+        throw new ReflectionException("Unable to create parse node for value.");
     }
 
 }

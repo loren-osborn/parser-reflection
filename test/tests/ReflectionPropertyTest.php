@@ -61,28 +61,29 @@ class ReflectionPropertyTest extends AbstractClassTestCaseBase
         $allNameGetters = $this->getGettersToCheck();
 
         $testCases = [];
-        $files     = $this->getFilesToAnalyze();
-        foreach ($files as $fileList) {
-            foreach ($fileList as $fileName) {
-                $fileName = stream_resolve_include_path($fileName);
-                $fileNode = ReflectionEngine::parseFile($fileName);
-
-                $reflectionFile = new ReflectionFile($fileName, $fileNode);
-                include_once $fileName;
-                foreach ($reflectionFile->getFileNamespaces() as $fileNamespace) {
-                    foreach ($fileNamespace->getClasses() as $parsedClass) {
-                        $refClass = new \ReflectionClass($parsedClass->getName());
-                        foreach ($refClass->getProperties() as $classProperty) {
-                            $caseName = $parsedClass->getName() . '->' . $classProperty->getName();
-                            foreach ($allNameGetters as $getterName) {
-                                $testCases[$caseName . ', ' . $getterName] = [
-                                    $parsedClass,
-                                    $classProperty,
-                                    $getterName
-                                ];
-                            }
-                        }
-                    }
+        $classes   = $this->getClassesToAnalyze();
+        foreach ($classes as $testCaseDesc => $classFilePair) {
+            if ($classFilePair['fileName']) {
+                $fileNode       = ReflectionEngine::parseFile($classFilePair['fileName']);
+                $reflectionFile = new ReflectionFile($classFilePair['fileName'], $fileNode);
+                $namespace      = $this->getNamespaceFromName($classFilePair['class']);
+                $fileNamespace  = $reflectionFile->getFileNamespace($namespace);
+                $parsedClass    = $fileNamespace->getClass($classFilePair['class']);
+                if ($classFilePair['class'] === $classFilePair['origClass']) {
+                    include_once $classFilePair['fileName'];
+                }
+            } else {
+                $parsedClass    = new ReflectionClass($classFilePair['class']);
+            }
+            $refClass = new \ReflectionClass($classFilePair['origClass']);
+            foreach ($refClass->getProperties() as $classProperty) {
+                $caseName = $testCaseDesc . '->' . $classProperty->getName();
+                foreach ($allNameGetters as $getterName) {
+                    $testCases[$caseName . ', ' . $getterName] = [
+                        'parsedClass' => $parsedClass,
+                        'refProperty' => $classProperty,
+                        'getterName'  => $getterName,
+                    ];
                 }
             }
         }

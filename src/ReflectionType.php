@@ -15,7 +15,7 @@ use ReflectionType as BaseReflectionType;
 /**
  * ReflectionType implementation
  */
-class ReflectionType extends BaseReflectionType
+class ReflectionType extends BaseReflectionType implements ReflectionInterface
 {
     /**
      * If type allows null or not
@@ -97,5 +97,20 @@ class ReflectionType extends BaseReflectionType
         }
 
         return $displayType;
+    }
+
+    /**
+     * Has type been loaded by PHP.
+     *
+     * @return bool
+     *     If a builtin type or class file was included.
+     */
+    public function wasIncluded()
+    {
+        return
+            $this->isBuiltin()                   ||
+            interface_exists($this->type, false) ||
+            trait_exists($this->type, false) ||
+            class_exists($this->type, false);
     }
 }
