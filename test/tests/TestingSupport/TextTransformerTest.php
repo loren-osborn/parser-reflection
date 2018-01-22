@@ -77,9 +77,9 @@ class TextTransformerTest extends TestCaseBase
             ],
             'More than one transform pair' => [
                 '$transforms'     => [
-                	['/\\bGeorge\\b/', 'Fred'],
-                	['/red/',          'green'],
-                	['/ok/',           'fail'],
+                    ['/\\bGeorge\\b/', 'Fred'],
+                    ['/red/',          'green'],
+                    ['/ok/',           'fail'],
                 ],
                 '$input'          => 'Only joking, I am George.',
                 '$expectedOutput' => 'Only jfailing, I am Fgreen.',

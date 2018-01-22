@@ -17,7 +17,7 @@ class TextTransformer
 {
     private $transforms;
 
-    public function __construct(array $transforms)
+    public function __construct(array $transforms = [])
     {
         $this->transforms = $transforms;
     }
