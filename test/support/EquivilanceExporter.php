@@ -11,7 +11,7 @@ namespace Go\ParserReflection\TestingSupport;
 
 use SebastianBergmann\Exporter\Exporter;
 use SebastianBergmann\RecursionContext\Context;
-use Go\ParserReflection\TestingSupport\PHPUnit\Constraint\IsParsedEquivilantToReflectionValue;
+use Go\ParserReflection\TestingSupport\PHPUnit\Constraint\IsParsedEquivilantToReflectionValue as EquivilanceConstraint;
 use InvalidArgumentException;
 
 class EquivilanceExporter extends Exporter
@@ -50,26 +50,25 @@ class EquivilanceExporter extends Exporter
             }
             return parent::recursiveExport($transformedValue, $indentation, $processed);
         }
-        if ($value instanceof \Reflector) {
-            $expectedClass = IsParsedEquivilantToReflectionValue::getParsedClass(get_class($value));
-            $transformedValue = ['name' => $value->getName()];
-            $rawOut = parent::recursiveExport($transformedValue, $indentation, $processed);
-            return preg_replace(
-                '/^Array \\&[0-9a-f.]+/',
-                str_replace('\\', '\\\\', $expectedClass) . ' Object',
-                $rawOut);
-        }
-        if ($value instanceof \ReflectionException) {
-            $expectedClass = IsParsedEquivilantToReflectionValue::getParsedClass(get_class($value));
-            $transformedValue = [
-                'message'  => preg_replace(
-                    '/((?<![a-zA-Z0-9_\\x7f-\\xff])\\\\+|)\\b(Reflect(ion([A-Z]\\w*)?|or))\\b/',
-                    '\\1Go\\\\ParserReflection\\\\\\2',
-                    $value->getMessage()),
-                'code'     => $value->getCode(),
-                'file'     => $value->getFile(),
-                'line'     => $value->getLine(),
+        if (($value instanceof \Reflector) || ($value instanceof \ReflectionException)) {
+            $origClass                    = get_class($value);
+            $expectedClass                = EquivilanceConstraint::getParsedClass($origClass);
+            $constructorParamsByClassName = [
+                'ReflectionClass'     => ['name'],
+                'ReflectionException' => ['message', 'code', 'file', 'line'],
             ];
+            if (!array_key_exists($origClass, $constructorParamsByClassName)) {
+                throw new \Exception(sprintf('INTERNAL ERROR: EquivilanceExport params for class %s not implemented.', $origClass));
+            }
+            $transformedValue = [];
+            foreach ($constructorParamsByClassName[$origClass] as $paramName) {
+                $methodName = 'get' . ucfirst($paramName);
+                $paramVal   = $value->$methodName();
+                if (is_string($paramVal)) {
+                    $paramVal = EquivilanceConstraint::replaceNativeClasses($paramVal);
+                }
+                $transformedValue[$paramName] = $paramVal;
+            }
             $rawOut = parent::recursiveExport($transformedValue, $indentation, $processed);
             return preg_replace(
                 '/^Array \\&[0-9a-f.]+/',

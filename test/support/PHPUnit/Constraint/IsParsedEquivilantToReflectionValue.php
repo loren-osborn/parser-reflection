@@ -58,6 +58,21 @@ class IsParsedEquivilantToReflectionValue extends PHPUnit_Framework_Constraint
     }
 
     /**
+     * Returns the string input with parsed reflection classes replaced with native equivilants.
+     *
+     * @param string $input String that may contain parsed reflection class names.
+     *
+     * @return string Tranformed output.
+     */
+    public static function replaceNativeClasses($input)
+    {
+        return preg_replace(
+                    '/((?<![a-zA-Z0-9_\\x7f-\\xff])\\\\+|[^\\\\]|^)\\b(Reflect(ion([A-Z]\\w*)?|or))\\b/',
+                    '\\1Go\\\\ParserReflection\\\\\\2',
+                    $input);
+    }
+
+    /**
      * Returns the native reflection class equivilant to the given parsed class.
      *
      * @param string $parsedClass The name of the native reflection class.
@@ -70,6 +85,21 @@ class IsParsedEquivilantToReflectionValue extends PHPUnit_Framework_Constraint
             throw new InvalidArgumentException("$parsedClass not a parsed Reflection class.");
         }
         return preg_replace('/^(\\\\?)Go\\\\ParserReflection\\\\/', '\\1', $parsedClass);
+    }
+
+    /**
+     * Returns the string input with native reflection classes replaced with parsed equivilants.
+     *
+     * @param string $input String that may contain native reflection class names.
+     *
+     * @return string Tranformed output.
+     */
+    public static function replaceParsedClasses($input)
+    {
+        return preg_replace(
+                    '/((?<![a-zA-Z0-9_\\x7f-\\xff])\\\\+|[^\\\\]|^)\\bGo\\\\+ParserReflection\\\\+(Reflect(ion([A-Z]\\w*)?|or))\\b/',
+                    '\\1\\2',
+                    $input);
     }
 
     /**

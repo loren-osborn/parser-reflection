@@ -152,8 +152,20 @@ class IsParsedEquivilantToReflectionValueTest extends ParsedEquivilantComparitor
 
     public function getValidStaticMethodsWithSingleArgAndExpectedOutput()
     {
-        $reflectionClassPairs = $this->getReflectionClassPairsCases();
-        $result = [];
+        $reflectionClassPairs        = $this->getReflectionClassPairsCases();
+        $nonReflectionBuiltinClasses = $this->getNonReflectionBuiltInClassCases();
+        $result = [
+            'replaceNativeClasses() with prose' => [
+                '$staticMethodName' => 'replaceNativeClasses',
+                '$argument'         => 'Four score and seven years ago...',
+                '$expectedResult'   => 'Four score and seven years ago...',
+            ],
+            'replaceParsedClasses() with prose' => [
+                '$staticMethodName' => 'replaceParsedClasses',
+                '$argument'         => 'Four score and seven years ago...',
+                '$expectedResult'   => 'Four score and seven years ago...',
+            ],
+        ];
         foreach ($reflectionClassPairs as $caseName => $classPairs) {
             $result['getParsedClass() with ' . lcfirst($caseName)] = [
                 '$staticMethodName' => 'getParsedClass',
@@ -164,6 +176,55 @@ class IsParsedEquivilantToReflectionValueTest extends ParsedEquivilantComparitor
                 '$staticMethodName' => 'getNativeClass',
                 '$argument'         => $classPairs['$parsedClass'],
                 '$expectedResult'   => $classPairs['$nativeClass'],
+            ];
+            $result['replaceNativeClasses() with ' . lcfirst($caseName)] = [
+                '$staticMethodName' => 'replaceNativeClasses',
+                '$argument'         => $classPairs['$nativeClass'],
+                '$expectedResult'   => $classPairs['$parsedClass'],
+            ];
+            $result['replaceParsedClasses() with ' . lcfirst($caseName)] = [
+                '$staticMethodName' => 'replaceParsedClasses',
+                '$argument'         => $classPairs['$parsedClass'],
+                '$expectedResult'   => $classPairs['$nativeClass'],
+            ];
+            $result['replaceNativeClasses() with backwards ' . lcfirst($caseName)] = [
+                '$staticMethodName' => 'replaceNativeClasses',
+                '$argument'         => $classPairs['$parsedClass'],
+                '$expectedResult'   => $classPairs['$parsedClass'],
+            ];
+            $result['replaceParsedClasses() with backwards ' . lcfirst($caseName)] = [
+                '$staticMethodName' => 'replaceParsedClasses',
+                '$argument'         => $classPairs['$nativeClass'],
+                '$expectedResult'   => $classPairs['$nativeClass'],
+            ];
+            $result['replaceNativeClasses() with ' . lcfirst($caseName) . ' in a sentence'] = [
+                '$staticMethodName' => 'replaceNativeClasses',
+                '$argument'         => sprintf('A sentence with %s in it.', $classPairs['$nativeClass']),
+                '$expectedResult'   => sprintf('A sentence with %s in it.', $classPairs['$parsedClass']),
+            ];
+            $result['replaceParsedClasses() with ' . lcfirst($caseName) . ' in a sentence'] = [
+                '$staticMethodName' => 'replaceParsedClasses',
+                '$argument'         => sprintf('A sentence with %s in it.', $classPairs['$parsedClass']),
+                '$expectedResult'   => sprintf('A sentence with %s in it.', $classPairs['$nativeClass']),
+            ];
+        }
+        foreach ($nonReflectionBuiltinClasses as $caseName => $classArr) {
+            $result['replaceNativeClasses() with non-reflection ' . lcfirst($caseName)] = [
+                '$staticMethodName' => 'replaceNativeClasses',
+                '$argument'         => $classArr['$class'],
+                '$expectedResult'   => $classArr['$class'],
+            ];
+            $result['replaceParsedClasses() with non-reflection ' . lcfirst($caseName)] = [
+                '$staticMethodName' => 'replaceParsedClasses',
+                '$argument'         => $classArr['$class'],
+                '$expectedResult'   => $classArr['$class'],
+            ];
+            $fakeParsedClass = preg_replace('/^(\\\\?)/', '\\1Go\\\\ParserReflection\\\\', $classArr['$class']);
+            $fakeClassCaseName = 'replaceParsedClasses() with fake reflection ' . lcfirst(str_replace($classArr['$class'], $fakeParsedClass, $caseName));
+            $result[$fakeClassCaseName] = [
+                '$staticMethodName' => 'replaceParsedClasses',
+                '$argument'         => $fakeParsedClass,
+                '$expectedResult'   => $fakeParsedClass,
             ];
         }
         return $result;
@@ -184,6 +245,16 @@ class IsParsedEquivilantToReflectionValueTest extends ParsedEquivilantComparitor
                 '$staticMethodName' => 'getNativeClass',
                 '$argument'         => $classPairs['$nativeClass'],
                 '$expectedMessage'  => $classPairs['$nativeClass'] . ' not a parsed Reflection class.',
+            ];
+            $result['getParsedClass() with ' . lcfirst($caseName) . ' in a sentence'] = [
+                '$staticMethodName' => 'getParsedClass',
+                '$argument'         => sprintf('A sentence with %s in it.', $classPairs['$nativeClass']),
+                '$expectedResult'   => sprintf('A sentence with %s in it. not a builtin Reflection class.', $classPairs['$nativeClass']),
+            ];
+            $result['getNativeClass() with ' . lcfirst($caseName) . ' in a sentence'] = [
+                '$staticMethodName' => 'getNativeClass',
+                '$argument'         => sprintf('A sentence with %s in it.', $classPairs['$parsedClass']),
+                '$expectedResult'   => sprintf('A sentence with %s in it. not a parsed Reflection class.', $classPairs['$parsedClass']),
             ];
         }
         foreach ($nonReflectionBuiltinClasses as $caseName => $classArr) {
