@@ -40,109 +40,50 @@ class IsParsedEquivilantToReflectionValueTest extends ParsedEquivilantComparitor
     }
 
     /**
-     * Tests IsParsedEquivilantToReflectionValue::getParsedClass() method
+     * Tests IsParsedEquivilantToReflectionValue static methods
      *
-     * @dataProvider getReflectionClassPairsCases
+     * @dataProvider getValidStaticMethodsWithSingleArgAndExpectedOutput
      *
-     * @param string  $nativeClass          The native class name.
-     * @param string  $expectedParsedClass  The parsed class name.
+     * @param string  $staticMethodName  The method to call.
+     * @param string  $argument          The argument to pass.
+     * @param string  $expectedResult    The result value to expect.
      */
-    public function testGetParsedClass($nativeClass, $expectedParsedClass)
+    public function testValidStaticMethodsWithSingleArg(
+        $staticMethodName,
+        $argument,
+        $expectedResult)
     {
-        $actualParsedClass = IsParsedEquivilantToReflectionValue::getParsedClass($nativeClass);
-        $this->assertEquals($expectedParsedClass, $actualParsedClass, 'Correct class name transformation.');
+        $actualResult = IsParsedEquivilantToReflectionValue::$staticMethodName($argument);
+        $this->assertEquals($expectedResult, $actualResult, 'Correct class name transformation.');
     }
 
     /**
-     * Tests IsParsedEquivilantToReflectionValue::getParsedClass() method
+     * Tests IsParsedEquivilantToReflectionValue static method exceptions
      *
-     * @dataProvider getReflectionClassPairsCases
+     * @dataProvider getInvalidStaticMethodsWithSingleArgAndExpectedExceptionMessage
      *
-     * @expectedException        InvalidArgumentException
-     * @expectedExceptionMessage not a builtin Reflection class.
-     *
-     * @param string  $nativeClass  The native class name.
-     * @param string  $parsedClass  The parsed class name.
+     * @param string  $staticMethodName  The method to call.
+     * @param string  $argument          The argument to pass.
+     * @param string  $expectedMessage   The exception message to expect.
      */
-    public function testGetParsedClassBackwards($nativeClass, $parsedClass)
+    public function testInvalidStaticMethodsWithSingleArg(
+        $staticMethodName,
+        $argument,
+        $expectedMessage)
     {
-        IsParsedEquivilantToReflectionValue::getParsedClass($parsedClass);
-    }
-
-    /**
-     * Tests IsParsedEquivilantToReflectionValue::getParsedClass() method
-     *
-     * @dataProvider getNonReflectionBuiltInClassCases
-     *
-     * @expectedException        InvalidArgumentException
-     * @expectedExceptionMessage not a builtin Reflection class.
-     *
-     * @param string  $class  The class name.
-     */
-    public function testGetParsedClassNonReflection($class)
-    {
-        IsParsedEquivilantToReflectionValue::getParsedClass($class);
-    }
-
-    /**
-     * Tests IsParsedEquivilantToReflectionValue::getNativeClass() method
-     *
-     * @dataProvider getReflectionClassPairsCases
-     *
-     * @param string  $expectedNativeClass  The native class name.
-     * @param string  $parsedClass          The parsed class name.
-     */
-    public function testGetNativeClass($expectedNativeClass, $parsedClass)
-    {
-        $actualNativeClass = IsParsedEquivilantToReflectionValue::getNativeClass($parsedClass);
-        $this->assertEquals($expectedNativeClass, $actualNativeClass, 'Correct class name transformation.');
-    }
-
-    /**
-     * Tests IsParsedEquivilantToReflectionValue::getNativeClass() method
-     *
-     * @dataProvider getReflectionClassPairsCases
-     *
-     * @expectedException        InvalidArgumentException
-     * @expectedExceptionMessage not a parsed Reflection class.
-     *
-     * @param string  $nativeClass  The native class name.
-     * @param string  $parsedClass  The parsed class name.
-     */
-    public function testGetNativeClassBackwards($nativeClass, $parsedClass)
-    {
-        IsParsedEquivilantToReflectionValue::getNativeClass($nativeClass);
-    }
-
-    /**
-     * Tests IsParsedEquivilantToReflectionValue::getNativeClass() method
-     *
-     * @dataProvider getNonReflectionBuiltInClassCases
-     *
-     * @expectedException        InvalidArgumentException
-     * @expectedExceptionMessage not a parsed Reflection class.
-     *
-     * @param string  $class  The class name.
-     */
-    public function testGetNativeClassNonReflection($class)
-    {
-        IsParsedEquivilantToReflectionValue::getNativeClass($class);
-    }
-
-    /**
-     * Tests IsParsedEquivilantToReflectionValue::getNativeClass() method
-     *
-     * @dataProvider getNonReflectionBuiltInClassCases
-     *
-     * @expectedException        InvalidArgumentException
-     * @expectedExceptionMessage not a parsed Reflection class.
-     *
-     * @param string  $class  The class name.
-     */
-    public function testGetFakeParsedClassNonReflection($class)
-    {
-        $fakeParsedClass = preg_replace('/^(\\\\?)/', '\\1Go\\\\ParserReflection\\\\', $class);
-        IsParsedEquivilantToReflectionValue::getNativeClass($fakeParsedClass);
+        try {
+            IsParsedEquivilantToReflectionValue::$staticMethodName($argument);
+            $this->fail(sprintf(
+                'Method %s::%s(%s) should have thrown exception.',
+                IsParsedEquivilantToReflectionValue::class,
+                $staticMethodName,
+                var_export($argument, true)
+            ));
+        }
+        catch (InvalidArgumentException $e) {
+            $this->assertEquals(InvalidArgumentException::class, get_class($e), 'Expected exception class.');
+            $this->assertContains($expectedMessage, $e->getMessage(), 'Correct exception message.');
+        }
     }
 
     public function getReflectionClassPairsCases()
@@ -204,6 +145,64 @@ class IsParsedEquivilantToReflectionValueTest extends ParsedEquivilantComparitor
             ];
             $result["Absolute $class"] = [
                 '$class' => "\\$class",
+            ];
+        }
+        return $result;
+    }
+
+    public function getValidStaticMethodsWithSingleArgAndExpectedOutput()
+    {
+        $reflectionClassPairs = $this->getReflectionClassPairsCases();
+        $result = [];
+        foreach ($reflectionClassPairs as $caseName => $classPairs) {
+            $result['getParsedClass() with ' . lcfirst($caseName)] = [
+                '$staticMethodName' => 'getParsedClass',
+                '$argument'         => $classPairs['$nativeClass'],
+                '$expectedResult'   => $classPairs['$parsedClass'],
+            ];
+            $result['getNativeClass() with ' . lcfirst($caseName)] = [
+                '$staticMethodName' => 'getNativeClass',
+                '$argument'         => $classPairs['$parsedClass'],
+                '$expectedResult'   => $classPairs['$nativeClass'],
+            ];
+        }
+        return $result;
+    }
+
+    public function getInvalidStaticMethodsWithSingleArgAndExpectedExceptionMessage()
+    {
+        $reflectionClassPairs        = $this->getReflectionClassPairsCases();
+        $nonReflectionBuiltinClasses = $this->getNonReflectionBuiltInClassCases();
+        $result = [];
+        foreach ($reflectionClassPairs as $caseName => $classPairs) {
+            $result['getParsedClass() with backwards ' . lcfirst($caseName)] = [
+                '$staticMethodName' => 'getParsedClass',
+                '$argument'         => $classPairs['$parsedClass'],
+                '$expectedMessage'  => $classPairs['$parsedClass'] . ' not a builtin Reflection class.',
+            ];
+            $result['getNativeClass() with backwards ' . lcfirst($caseName)] = [
+                '$staticMethodName' => 'getNativeClass',
+                '$argument'         => $classPairs['$nativeClass'],
+                '$expectedMessage'  => $classPairs['$nativeClass'] . ' not a parsed Reflection class.',
+            ];
+        }
+        foreach ($nonReflectionBuiltinClasses as $caseName => $classArr) {
+            $result['getParsedClass() with non-reflection ' . lcfirst($caseName)] = [
+                '$staticMethodName' => 'getParsedClass',
+                '$argument'         => $classArr['$class'],
+                '$expectedMessage'  => $classArr['$class'] . ' not a builtin Reflection class.',
+            ];
+            $result['getNativeClass() with non-reflection ' . lcfirst($caseName)] = [
+                '$staticMethodName' => 'getNativeClass',
+                '$argument'         => $classArr['$class'],
+                '$expectedMessage'  => $classArr['$class'] . ' not a parsed Reflection class.',
+            ];
+            $fakeParsedClass = preg_replace('/^(\\\\?)/', '\\1Go\\\\ParserReflection\\\\', $classArr['$class']);
+            $fakeClassCaseName = 'getNativeClass() with fake reflection ' . lcfirst(str_replace($classArr['$class'], $fakeParsedClass, $caseName));
+            $result[$fakeClassCaseName] = [
+                '$staticMethodName' => 'getNativeClass',
+                '$argument'         => $fakeParsedClass,
+                '$expectedMessage'  => $fakeParsedClass . ' not a parsed Reflection class.',
             ];
         }
         return $result;
