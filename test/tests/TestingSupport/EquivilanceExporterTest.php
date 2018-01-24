@@ -26,7 +26,8 @@ class EquivilanceExporterTest extends ParsedEquivilantComparitorTestBase
      * @param string                $value                    The value to compare.
      * @param TextTransformer|null  $transformer              Any string transformer to globally compare.
      * @param string                $expectedStringification  Stringification of the value.
-     * @param string                $expectedComparisonType   IGNORED type of comparison. 
+     * @param string                $expectedComparisonType   IGNORED type of comparison.
+     * @param null|string           $testSkipReason           If non-null forces test to be skipped.
      *
      * @dataProvider getConstructorValuesWithExpectedState
      */
@@ -34,8 +35,12 @@ class EquivilanceExporterTest extends ParsedEquivilantComparitorTestBase
         $value,
         $transformer,
         $expectedStringification,
-        $expectedComparisonType)
+        $expectedComparisonType,
+        $testSkipReason)
     {
+        if (!is_null($testSkipReason)) {
+            $this->markTestSkipped($testSkipReason);
+        }
         $obj             = new EquivilanceExporter($transformer);
         $stringification = $obj->export($value);
         $this->assertEquals(

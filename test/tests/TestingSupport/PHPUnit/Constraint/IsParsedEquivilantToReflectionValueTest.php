@@ -286,6 +286,7 @@ class IsParsedEquivilantToReflectionValueTest extends ParsedEquivilantComparitor
      * @param TextTransformer|null  $transformer              Any string transformer to globally compare.
      * @param string                $expectedStringification  Stringification of the value.
      * @param string                $expectedComparisonType   Type of comparison.
+     * @param null|string           $testSkipReason           If non-null forces test to be skipped.
      *
      * @dataProvider getConstructorValuesWithExpectedState
      */
@@ -293,8 +294,12 @@ class IsParsedEquivilantToReflectionValueTest extends ParsedEquivilantComparitor
         $value,
         $transformer,
         $expectedStringification,
-        $expectedComparisonType)
+        $expectedComparisonType,
+        $testSkipReason)
     {
+        if (!is_null($testSkipReason)) {
+            $this->markTestSkipped($testSkipReason);
+        }
         $obj             = new IsParsedEquivilantToReflectionValue($value, $transformer);
         $stringification = $obj->toString();
         $this->assertEquals(

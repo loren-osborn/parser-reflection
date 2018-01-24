@@ -50,29 +50,56 @@ class EquivilanceExporter extends Exporter
             }
             return parent::recursiveExport($transformedValue, $indentation, $processed);
         }
+        if (!$processed) {
+            $processed = new Context;
+        }
+        if (!isset($processed->equivilantKeyLookup)) {
+            $processed->equivilantKeyLookup = [];
+        }
         if (($value instanceof \Reflector) || ($value instanceof \ReflectionException)) {
             $origClass                    = get_class($value);
-            $expectedClass                = EquivilanceConstraint::getParsedClass($origClass);
+            $equivilantClass              = EquivilanceConstraint::getParsedClass($origClass);
+            if ($hash = $processed->contains($value)) {
+                $equivilantHash = $processed->equivilantKeyLookup[$hash];
+                return sprintf('%s Object &%s', $equivilantClass, $equivilantHash);
+            }
             $constructorParamsByClassName = [
-                'ReflectionClass'     => ['name'],
-                'ReflectionException' => ['message', 'code', 'file', 'line'],
+                'ReflectionClass'         => ['name'],
+                'ReflectionException'     => ['message', 'code', 'file', 'line'],
+                'ReflectionClassConstant' => ['class:declaringClass->name', 'name'],
             ];
             if (!array_key_exists($origClass, $constructorParamsByClassName)) {
                 throw new \Exception(sprintf('INTERNAL ERROR: EquivilanceExport params for class %s not implemented.', $origClass));
             }
             $transformedValue = [];
-            foreach ($constructorParamsByClassName[$origClass] as $paramName) {
-                $methodName = 'get' . ucfirst($paramName);
-                $paramVal   = $value->$methodName();
-                if (is_string($paramVal)) {
+            foreach ($constructorParamsByClassName[$origClass] as $paramNameSpec) {
+                if (strpos($paramNameSpec, ':') === false) {
+                    $parameterName = $paramNameSpec;
+                    $propertyPath  = $paramNameSpec;
+                }
+                else {
+                    list($parameterName, $propertyPath) = explode(':', $paramNameSpec);
+                }
+                $paramVal = $value;
+                foreach (explode('->', $propertyPath) as $propertyName) {
+                    $methodName = 'get' . ucfirst($propertyName);
+                    $paramVal   = $paramVal->$methodName();
+                }
+                if (($value instanceof \Exception) && is_string($paramVal)) {
                     $paramVal = EquivilanceConstraint::replaceNativeClasses($paramVal);
                 }
-                $transformedValue[$paramName] = $paramVal;
+                $transformedValue[$parameterName] = $paramVal;
             }
-            $rawOut = parent::recursiveExport($transformedValue, $indentation, $processed);
+            $rawOut         = parent::recursiveExport($transformedValue, $indentation, $processed);
+            $hash           = $processed->add($value);
+            $equivilantHash = $processed->contains($transformedValue);
+            if ($equivilantHash === false) {
+                throw new \Exception('INTERNAL ERROR: Array should have already been added to $processed.');
+            }
+            $processed->equivilantKeyLookup[$hash] = $equivilantHash;
             return preg_replace(
-                '/^Array \\&[0-9a-f.]+/',
-                str_replace('\\', '\\\\', $expectedClass) . ' Object',
+                '/^Array (\\&[0-9a-fA-F.]+)/',
+                str_replace('\\', '\\\\', $equivilantClass) . ' Object &' . $equivilantHash,
                 $rawOut);
         }
         return parent::recursiveExport($value, $indentation, $processed);
