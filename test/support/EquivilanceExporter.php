@@ -56,6 +56,9 @@ class EquivilanceExporter extends Exporter
         if (!isset($processed->equivilantKeyLookup)) {
             $processed->equivilantKeyLookup = [];
         }
+        if (is_object($value) && isset($processed->shortenNestedOutput)) {
+            return $this->shortenedExport($value);
+        }
         if (($value instanceof \Reflector) || ($value instanceof \ReflectionException)) {
             $origClass                    = get_class($value);
             $equivilantClass              = EquivilanceConstraint::getParsedClass($origClass);
@@ -65,7 +68,7 @@ class EquivilanceExporter extends Exporter
             }
             $constructorParamsByClassName = [
                 'ReflectionClass'         => ['name'],
-                'ReflectionException'     => ['message', 'code', 'file', 'line'],
+                'ReflectionException'     => ['message', 'code', 'previous', 'file', 'line'],
                 'ReflectionClassConstant' => ['class:declaringClass->name', 'name'],
             ];
             if (!array_key_exists($origClass, $constructorParamsByClassName)) {
@@ -90,9 +93,11 @@ class EquivilanceExporter extends Exporter
                 }
                 $transformedValue[$parameterName] = $paramVal;
             }
-            $rawOut         = parent::recursiveExport($transformedValue, $indentation, $processed);
-            $hash           = $processed->add($value);
-            $equivilantHash = $processed->contains($transformedValue);
+            $processed->shortenNestedOutput = true;
+            $rawOut                         = parent::recursiveExport($transformedValue, $indentation, $processed);
+            $hash                           = $processed->add($value);
+            $equivilantHash                 = $processed->contains($transformedValue);
+            unset($processed->shortenNestedOutput);
             if ($equivilantHash === false) {
                 throw new \Exception('INTERNAL ERROR: Array should have already been added to $processed.');
             }

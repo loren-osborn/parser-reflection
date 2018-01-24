@@ -19,12 +19,13 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
     {
         $origExceptionMessageClass    = 'ReflectionClassConstant';
         $origExceptionMessageTemplate = 'Error calling %s::methodName() do re mi';
+        $previousException            = new \Exception('Testing...', 7);
         try {
             // Make sure file, line and backtrace are populated.
             throw new \ReflectionException(
                 sprintf($origExceptionMessageTemplate, $origExceptionMessageClass),
                 42,
-                new \Exception('Testing...', 7));
+                $previousException);
         } catch (\ReflectionException $e) {
             $reflectionException = $e;
         }
@@ -61,14 +62,21 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
                 '$value'                   => ['foo' => $reflectionException, 'bar' => 'abcde'],
                 '$transformer'             => null,
                 '$expectedStringification' => preg_replace(
-                    '/(?:^|(?<==>))(\\s+)Array \\&1/',
-                    '\\1Go\\\\ParserReflection\\\\ReflectionException Object &1',
+                    [
+                        '/(?:^|(?<==>))(\\s+)Array \\&1/',
+                        '/\\b1234598765\\b/',
+                    ],
+                    [
+                        '\\1Go\\\\ParserReflection\\\\ReflectionException Object &1',
+                        $exporter->shortenedExport($previousException),
+                    ],
                     $exporter->export([
                         'foo' => [
                             'message'  => sprintf(
                                 $origExceptionMessageTemplate,
                                 'Go\\ParserReflection\\' . $origExceptionMessageClass),
                             'code'     => 42,
+                            'previous' => 1234598765,
                             'file'     => $reflectionException->getFile(),
                             'line'     => $reflectionException->getLine(),
                         ],
