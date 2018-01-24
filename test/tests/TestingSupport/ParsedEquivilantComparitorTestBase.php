@@ -34,6 +34,7 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
         $classConstantEquivilant = ['class'  => 'DateTime', 'name'   => 'ATOM'];
         $exporter                = new Exporter();
         return [
+            'Array serialization' =>
             [
                 '$value'                   => [1, 2, 3],
                 '$transformer'             => null,
@@ -41,6 +42,7 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
                 '$expectedComparisonType'  => 'identical',
                 '$testSkipReason'          => null,
             ],
+            'TextTransformer on string' =>
             [
                 '$value'                   => 'fee figh foo fum',
                 '$transformer'             => new TextTransformer([['/foo/', 'bar']]),
@@ -48,6 +50,7 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
                 '$expectedComparisonType'  => 'identical',
                 '$testSkipReason'          => null,
             ],
+            'ReflectionClass' =>
             [
                 '$value'                   => $reflectionClass,
                 '$transformer'             => null,
@@ -58,6 +61,7 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
                 '$expectedComparisonType'  => 'equivilant',
                 '$testSkipReason'          => null,
             ],
+            'ReflectionException in an array' =>
             [
                 '$value'                   => ['foo' => $reflectionException, 'bar' => 'abcde'],
                 '$transformer'             => null,
@@ -77,13 +81,25 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
                                 'Go\\ParserReflection\\' . $origExceptionMessageClass),
                             'code'     => 42,
                             'previous' => 1234598765,
-                            'file'     => $reflectionException->getFile(),
-                            'line'     => $reflectionException->getLine(),
                         ],
                         'bar' => 'abcde'])),
                 '$expectedComparisonType'  => 'equivilant',
                 '$testSkipReason'          => null,
             ],
+            'ReflectionException without optional arguments' =>
+            [
+                '$value'                   => new \ReflectionException('Testing abc123 bar'),
+                '$transformer'             => new TextTransformer([['/abc123/', 'foo']]),
+                '$expectedStringification' => preg_replace(
+                    '/^Array \\&0/',
+                    '\\1Go\\\\ParserReflection\\\\ReflectionException Object &0',
+                    $exporter->export([
+                        'message'  => 'Testing foo bar',
+                    ])),
+                '$expectedComparisonType'  => 'equivilant',
+                '$testSkipReason'          => null,
+            ],
+            'ReflectionClassConstant in data structure more than once' =>
             [
                 '$value'                   => [$reflectionClassConstant, $reflectionClassConstant],
                 '$transformer'             => null,

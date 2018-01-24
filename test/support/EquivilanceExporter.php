@@ -68,14 +68,22 @@ class EquivilanceExporter extends Exporter
             }
             $constructorParamsByClassName = [
                 'ReflectionClass'         => ['name'],
-                'ReflectionException'     => ['message', 'code', 'previous', 'file', 'line'],
                 'ReflectionClassConstant' => ['class:declaringClass->name', 'name'],
+                'ReflectionZendExtension' => ['name'],
+                // ...
+                'ReflectionException'     => ['message', 'code(0)', 'previous(null)'],
             ];
             if (!array_key_exists($origClass, $constructorParamsByClassName)) {
                 throw new \Exception(sprintf('INTERNAL ERROR: EquivilanceExport params for class %s not implemented.', $origClass));
             }
             $transformedValue = [];
             foreach ($constructorParamsByClassName[$origClass] as $paramNameSpec) {
+                $matches      = [];
+                $defaultValue = null;
+                if (preg_match('/^([^(]*)\\((.*)\\)$/', $paramNameSpec, $matches)) {
+                    $paramNameSpec = $matches[1];
+                    $defaultValue  = $matches[2];
+                }
                 if (strpos($paramNameSpec, ':') === false) {
                     $parameterName = $paramNameSpec;
                     $propertyPath  = $paramNameSpec;
@@ -91,7 +99,9 @@ class EquivilanceExporter extends Exporter
                 if (($value instanceof \Exception) && is_string($paramVal)) {
                     $paramVal = EquivilanceConstraint::replaceNativeClasses($paramVal);
                 }
-                $transformedValue[$parameterName] = $paramVal;
+                if (!strlen($defaultValue) || ($paramVal !== eval("return $defaultValue;"))) {
+                    $transformedValue[$parameterName] = $paramVal;
+                }
             }
             $processed->shortenNestedOutput = true;
             $rawOut                         = parent::recursiveExport($transformedValue, $indentation, $processed);
