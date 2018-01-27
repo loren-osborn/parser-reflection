@@ -33,6 +33,75 @@ class EquivilanceExporter extends Exporter
     }
 
     /**
+     * Get constructor arguments that would yeild reflection class object.
+     *
+     * @param  Reflector|ReflectionException $obj  The object to inspect
+     * @return array  Constructor arguments that would create equivilant object.
+     *
+     */
+    private function getConstructorArgs($obj)
+    {
+        $constructorParamsByClassName = [
+            'ReflectionClass'         => ['name'],
+            'ReflectionClassConstant' => [
+                [
+                    'name'      => 'class',
+                    'callChain' => ['getDeclaringClass', 'getName']
+                ],
+                'name'
+            ],
+            'ReflectionZendExtension' => ['name'],
+            // ...
+            'ReflectionException'     => [
+                'message',
+                [
+                    'name'         => 'code',
+                    'defaultValue' => 0,
+                ],
+                [
+                    'name'         => 'previous',
+                    'defaultValue' => null,
+                ],
+            ],
+        ];
+        $class = get_class($obj);
+        if ($obj instanceof \Exception) {
+            $class = 'ReflectionException';
+        }
+        if (!array_key_exists($class, $constructorParamsByClassName)) {
+            throw new \Exception(sprintf('INTERNAL ERROR: EquivilanceExport params for class %s not implemented.', $class));
+        }
+        $result = [];
+        foreach ($constructorParamsByClassName[$class] as $paramNameSpec) {
+           $normalizedSpec = $paramNameSpec;
+            if (is_string($paramNameSpec)) {
+                $normalizedSpec = ['name' => $paramNameSpec];
+            }
+            if (!array_key_exists('getValueFrom', $normalizedSpec)) {
+                if (!array_key_exists('callChain', $normalizedSpec)) {
+                    $normalizedSpec['callChain'] = ['get' . ucfirst($normalizedSpec['name'])];
+                }
+                $normalizedSpec['getValueFrom'] = (function ($inObj) use ($normalizedSpec) {
+                    $outVal = $inObj;
+                    foreach ($normalizedSpec['callChain'] as $methodName) {
+                        $outVal = $outVal->$methodName();
+                    }
+                    return $outVal;
+                });
+            }
+            $getValueFrom = $normalizedSpec['getValueFrom'];
+            $paramVal     = $getValueFrom($obj);
+            if (
+                !array_key_exists('defaultValue', $normalizedSpec) ||
+                ($paramVal !== $normalizedSpec['defaultValue'])
+            ) {
+                $result[$normalizedSpec['name']] = $paramVal;
+            }
+        }
+        return $result;
+    }
+
+    /**
      * Recursive implementation of export
      *
      * @param  mixed    $value        The value to export
@@ -56,57 +125,34 @@ class EquivilanceExporter extends Exporter
         if (!isset($processed->equivilantKeyLookup)) {
             $processed->equivilantKeyLookup = [];
         }
-        if (is_object($value) && isset($processed->shortenNestedOutput)) {
-            return $this->shortenedExport($value);
-        }
-        if (($value instanceof \Reflector) || ($value instanceof \ReflectionException)) {
-            $origClass                    = get_class($value);
-            $equivilantClass              = EquivilanceConstraint::getParsedClass($origClass);
+        if (
+            ($value instanceof \Reflector) ||
+            ($value instanceof \ReflectionException) ||
+            (isset($processed->shortenNestedOutput) && ($value instanceof \Exception))
+        ) {
+            $equivilantClass = ($origClass = get_class($value));
+            if (
+                ($value instanceof \Reflector) ||
+                ($value instanceof \ReflectionException)
+            ) {
+                $equivilantClass = EquivilanceConstraint::getParsedClass($origClass);
+            }
             if ($hash = $processed->contains($value)) {
                 $equivilantHash = $processed->equivilantKeyLookup[$hash];
                 return sprintf('%s Object &%s', $equivilantClass, $equivilantHash);
             }
-            $constructorParamsByClassName = [
-                'ReflectionClass'         => ['name'],
-                'ReflectionClassConstant' => ['class:declaringClass->name', 'name'],
-                'ReflectionZendExtension' => ['name'],
-                // ...
-                'ReflectionException'     => ['message', 'code(0)', 'previous(null)'],
-            ];
-            if (!array_key_exists($origClass, $constructorParamsByClassName)) {
-                throw new \Exception(sprintf('INTERNAL ERROR: EquivilanceExport params for class %s not implemented.', $origClass));
-            }
-            $transformedValue = [];
-            foreach ($constructorParamsByClassName[$origClass] as $paramNameSpec) {
-                $matches      = [];
-                $defaultValue = null;
-                if (preg_match('/^([^(]*)\\((.*)\\)$/', $paramNameSpec, $matches)) {
-                    $paramNameSpec = $matches[1];
-                    $defaultValue  = $matches[2];
-                }
-                if (strpos($paramNameSpec, ':') === false) {
-                    $parameterName = $paramNameSpec;
-                    $propertyPath  = $paramNameSpec;
-                }
-                else {
-                    list($parameterName, $propertyPath) = explode(':', $paramNameSpec);
-                }
-                $paramVal = $value;
-                foreach (explode('->', $propertyPath) as $propertyName) {
-                    $methodName = 'get' . ucfirst($propertyName);
-                    $paramVal   = $paramVal->$methodName();
-                }
-                if (($value instanceof \Exception) && is_string($paramVal)) {
-                    $paramVal = EquivilanceConstraint::replaceNativeClasses($paramVal);
-                }
-                if (!strlen($defaultValue) || ($paramVal !== eval("return $defaultValue;"))) {
-                    $transformedValue[$parameterName] = $paramVal;
+            $constructorArgs = $this->getConstructorArgs($value);
+            if ($value instanceof \Exception) {
+                foreach ($constructorArgs as $argName => $argVal) {
+                    if (is_string($argVal)) {
+                        $constructorArgs[$argName] = EquivilanceConstraint::replaceNativeClasses($argVal);
+                    }
                 }
             }
             $processed->shortenNestedOutput = true;
-            $rawOut                         = parent::recursiveExport($transformedValue, $indentation, $processed);
+            $rawOut                         = parent::recursiveExport($constructorArgs, $indentation, $processed);
             $hash                           = $processed->add($value);
-            $equivilantHash                 = $processed->contains($transformedValue);
+            $equivilantHash                 = $processed->contains($constructorArgs);
             unset($processed->shortenNestedOutput);
             if ($equivilantHash === false) {
                 throw new \Exception('INTERNAL ERROR: Array should have already been added to $processed.');

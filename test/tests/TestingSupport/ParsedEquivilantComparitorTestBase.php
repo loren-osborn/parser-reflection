@@ -20,15 +20,10 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
         $origExceptionMessageClass    = 'ReflectionClassConstant';
         $origExceptionMessageTemplate = 'Error calling %s::methodName() do re mi';
         $previousException            = new \Exception('Testing...', 7);
-        try {
-            // Make sure file, line and backtrace are populated.
-            throw new \ReflectionException(
-                sprintf($origExceptionMessageTemplate, $origExceptionMessageClass),
-                42,
-                $previousException);
-        } catch (\ReflectionException $e) {
-            $reflectionException = $e;
-        }
+        $reflectionException = new \ReflectionException(
+            sprintf($origExceptionMessageTemplate, $origExceptionMessageClass),
+            42,
+            $previousException);
         $reflectionClass         = new \ReflectionClass('DateTime');
         $reflectionClassConstant = class_exists('ReflectionClassConstant') ? new \ReflectionClassConstant('DateTime', 'ATOM') : null;
         $classConstantEquivilant = ['class'  => 'DateTime', 'name'   => 'ATOM'];
@@ -68,11 +63,11 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
                 '$expectedStringification' => preg_replace(
                     [
                         '/(?:^|(?<==>))(\\s+)Array \\&1/',
-                        '/\\b1234598765\\b/',
+                        '/(?:^|(?<==>))(\\s+)Array \\&2/',
                     ],
                     [
                         '\\1Go\\\\ParserReflection\\\\ReflectionException Object &1',
-                        $exporter->shortenedExport($previousException),
+                        '\\1Exception Object &2',
                     ],
                     $exporter->export([
                         'foo' => [
@@ -80,7 +75,10 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
                                 $origExceptionMessageTemplate,
                                 'Go\\ParserReflection\\' . $origExceptionMessageClass),
                             'code'     => 42,
-                            'previous' => 1234598765,
+                            'previous' => [
+                                'message' => 'Testing...',
+                                'code'    => 7,
+                            ],
                         ],
                         'bar' => 'abcde'])),
                 '$expectedComparisonType'  => 'equivilant',
