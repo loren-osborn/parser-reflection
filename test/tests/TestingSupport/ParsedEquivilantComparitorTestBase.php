@@ -97,6 +97,33 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
                 '$expectedComparisonType'  => 'equivilant',
                 '$testSkipReason'          => null,
             ],
+            'ReflectionException with single optional argument' =>
+            [
+                '$value'                   => new \ReflectionException(
+                    'Testing abc123 bar',
+                    0,
+                    $previousException),
+                '$transformer'             => new TextTransformer([['/abc123/', 'foo']]),
+                '$expectedStringification' => preg_replace(
+                    [
+                        '/^Array \\&0/',
+                        '/(?:^|(?<==>))(\\s+)Array \\&1/',
+                    ],
+                    [
+                        '\\1Go\\\\ParserReflection\\\\ReflectionException Object &0',
+                        '\\1Exception Object &1',
+                    ],
+                    $exporter->export([
+                        'message'  => 'Testing foo bar',
+                        'code'     => 0,
+                        'previous' => [
+                            'message' => 'Testing...',
+                            'code'    => 7,
+                        ],
+                    ])),
+                '$expectedComparisonType'  => 'equivilant',
+                '$testSkipReason'          => null,
+            ],
             'ReflectionClassConstant in data structure more than once' =>
             [
                 '$value'                   => [$reflectionClassConstant, $reflectionClassConstant],
