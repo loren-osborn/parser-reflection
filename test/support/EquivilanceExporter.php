@@ -72,7 +72,7 @@ class EquivilanceExporter extends Exporter
             throw new \Exception(sprintf('INTERNAL ERROR: EquivilanceExport params for class %s not implemented.', $class));
         }
         $result        = [];
-        $defaultValues = [];
+        $supressedDefaultValues = [];
         foreach ($constructorParamsByClassName[$class] as $paramNameSpec) {
            $normalizedSpec = $paramNameSpec;
             if (is_string($paramNameSpec)) {
@@ -96,14 +96,16 @@ class EquivilanceExporter extends Exporter
                 !array_key_exists('defaultValue', $normalizedSpec) ||
                 ($paramVal !== $normalizedSpec['defaultValue'])
             ) {
-                foreach ($defaultValues as $defaultParamName => $defaultParamVal) {
-                    $result[$defaultParamName] = $defaultParamVal;
+                if (count($supressedDefaultValues) > 0) {
+                    foreach ($supressedDefaultValues as $defaultParamName => $defaultParamVal) {
+                        $result[$defaultParamName] = $defaultParamVal;
+                    }
+                    $supressedDefaultValues = [];
                 }
-                $defaultValues                   = [];
                 $result[$normalizedSpec['name']] = $paramVal;
             }
             else {
-                $defaultValues[$normalizedSpec['name']] = $paramVal;
+                $supressedDefaultValues[$normalizedSpec['name']] = $paramVal;
             }
         }
         return $result;
