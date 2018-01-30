@@ -140,37 +140,39 @@ class EquivilanceExporter extends Exporter
             ($value instanceof \ReflectionException) ||
             (isset($processed->shortenNestedOutput) && ($value instanceof \Exception))
         ) {
-            $equivilantClass = ($origClass = get_class($value));
-            if (
+            $valueIsReflectorObject =
                 ($value instanceof \Reflector) ||
-                ($value instanceof \ReflectionException)
-            ) {
-                $equivilantClass = EquivilanceConstraint::getParsedClass($origClass);
-            }
-            if ($hash = $processed->contains($value)) {
-                $equivilantHash = $processed->equivilantKeyLookup[$hash];
-                return sprintf('%s Object &%s', $equivilantClass, $equivilantHash);
+                ($value instanceof \ReflectionException);
+            $origClass = get_class($value);
+            $class     = $valueIsReflectorObject ? EquivilanceConstraint::getParsedClass($origClass) : $origClass;
+            $origHash  = $processed->contains($value);
+            if ($origHash) {
+                $hash = $processed->equivilantKeyLookup[$origHash];
+                return sprintf('%s Object &%s', $class, $hash);
             }
             $constructorArgs = $this->getConstructorArgs($value);
-            if ($value instanceof \Exception) {
+            if ($valueIsReflectorObject) {
                 foreach ($constructorArgs as $argName => $argVal) {
                     if (is_string($argVal)) {
                         $constructorArgs[$argName] = EquivilanceConstraint::replaceNativeClasses($argVal);
                     }
                 }
             }
+            $nested                         = isset($processed->shortenNestedOutput);
             $processed->shortenNestedOutput = true;
             $rawOut                         = parent::recursiveExport($constructorArgs, $indentation, $processed);
-            $hash                           = $processed->add($value);
-            $equivilantHash                 = $processed->contains($constructorArgs);
-            unset($processed->shortenNestedOutput);
-            if ($equivilantHash === false) {
+            $origHash                       = $processed->add($value);
+            $hash                           = $processed->contains($constructorArgs);
+            if (!$nested) {
+                unset($processed->shortenNestedOutput);
+            }
+            $processed->equivilantKeyLookup[$origHash] = $hash;
+            if (($hash === false) || is_null($hash)) {
                 throw new \Exception('INTERNAL ERROR: Array should have already been added to $processed.');
             }
-            $processed->equivilantKeyLookup[$hash] = $equivilantHash;
             return preg_replace(
                 '/^Array (\\&[0-9a-fA-F.]+)/',
-                str_replace('\\', '\\\\', $equivilantClass) . ' Object &' . $equivilantHash,
+                str_replace('\\', '\\\\', $class) . ' Object &' . $hash,
                 $rawOut);
         }
         return parent::recursiveExport($value, $indentation, $processed);
