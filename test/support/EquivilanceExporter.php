@@ -11,7 +11,6 @@ namespace Go\ParserReflection\TestingSupport;
 
 use SebastianBergmann\Exporter\Exporter;
 use SebastianBergmann\RecursionContext\Context;
-use Go\ParserReflection\TestingSupport\PHPUnit\Constraint\IsParsedEquivilantToReflectionValue as EquivilanceConstraint;
 use InvalidArgumentException;
 
 class EquivilanceExporter extends Exporter
@@ -21,15 +20,22 @@ class EquivilanceExporter extends Exporter
      *                       on string value components prior to comparison.
      */
     protected $stringTransformer = null;
+    /**
+     * @var ReflectionMetaInfo  Object to query about classes under test.
+     */
+    protected $metaInfo = null;
 
     /**
      * Construct the exporter for value equivilance.
      *
      * @param TextTransformer  $transformer  The name of the native reflection class.
      */
-    public function __construct(TextTransformer $transformer = null)
+    public function __construct(
+        TextTransformer $transformer = null,
+        ReflectionMetaInfo $metaInfo = null)
     {
         $this->transformer = $transformer;
+        $this->metaInfo = $metaInfo ?: new ReflectionMetaInfo();
     }
 
     /**
@@ -144,7 +150,7 @@ class EquivilanceExporter extends Exporter
                 ($value instanceof \Reflector) ||
                 ($value instanceof \ReflectionException);
             $origClass = get_class($value);
-            $class     = $valueIsReflectorObject ? EquivilanceConstraint::getParsedClass($origClass) : $origClass;
+            $class     = $valueIsReflectorObject ? $this->metaInfo->getParsedClass($origClass) : $origClass;
             $origHash  = $processed->contains($value);
             if ($origHash) {
                 $hash = $processed->equivilantKeyLookup[$origHash];
@@ -154,7 +160,7 @@ class EquivilanceExporter extends Exporter
             if ($valueIsReflectorObject) {
                 foreach ($constructorArgs as $argName => $argVal) {
                     if (is_string($argVal)) {
-                        $constructorArgs[$argName] = EquivilanceConstraint::replaceNativeClasses($argVal);
+                        $constructorArgs[$argName] = $this->metaInfo->replaceNativeClasses($argVal);
                     }
                 }
             }
