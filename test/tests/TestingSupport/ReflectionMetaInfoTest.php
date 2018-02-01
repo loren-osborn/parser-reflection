@@ -134,6 +134,7 @@ class ReflectionMetaInfoTest extends TestCaseBase
             [
                 'convertMethod'    => 'getParsedClass',
                 'filterTextMethod' => 'replaceNativeClasses',
+                'validityMethod'   => 'isNativeClass',
                 'input'            => '$nativeClass',
                 'output'           => '$parsedClass',
                 'typeExpected'     => 'builtin',
@@ -141,6 +142,7 @@ class ReflectionMetaInfoTest extends TestCaseBase
             [
                 'convertMethod'    => 'getNativeClass',
                 'filterTextMethod' => 'replaceParsedClasses',
+                'validityMethod'   => 'isParsedClass',
                 'input'            => '$parsedClass',
                 'output'           => '$nativeClass',
                 'typeExpected'     => 'parsed',
@@ -160,15 +162,21 @@ class ReflectionMetaInfoTest extends TestCaseBase
         ];
         foreach ($methodGroupInfos as $methodGroup) {
             foreach ($testSamples as $idx => $text) {
-                $testCase          = sprintf(
-                    '%s() with prose %u',
-                    $methodGroup['filterTextMethod'],
-                    $idx + 1);
-                $result[$testCase] = [
-                    '$methodName'     => $methodGroup['filterTextMethod'],
-                    '$argument'       => $text,
-                    '$expectedResult' => $text,
+                $eachMethod = [
+                    'filterTextMethod' => $text,
+                    'validityMethod'   => false,
                 ];
+                foreach ($eachMethod as $methodName => $outputVal) {
+                    $testCase          = sprintf(
+                        '%s() with prose %u',
+                        $methodName,
+                        $idx + 1);
+                    $result[$testCase] = [
+                        '$methodName'     => $methodGroup[$methodName],
+                        '$argument'       => $text,
+                        '$expectedResult' => $outputVal,
+                    ];
+                }
             }
         }
         foreach ($methodGroupInfos as $methodGroup) {
@@ -193,6 +201,21 @@ class ReflectionMetaInfoTest extends TestCaseBase
                     '$argument'       => sprintf('A sentence with %s in it.', $classPairs[$methodGroup['input']]),
                     '$expectedResult' => sprintf('A sentence with %s in it.', $classPairs[$methodGroup['output']]),
                 ];
+                $result[$methodGroup['validityMethod'] . '() with ' . lcfirst($caseName)] = [
+                    '$methodName'     => $methodGroup['validityMethod'],
+                    '$argument'       => $classPairs[$methodGroup['input']],
+                    '$expectedResult' => true,
+                ];
+                $result[$methodGroup['validityMethod'] . '() with backwards ' . lcfirst($caseName)] = [
+                    '$methodName'     => $methodGroup['validityMethod'],
+                    '$argument'       => $classPairs[$methodGroup['output']],
+                    '$expectedResult' => false,
+                ];
+                $result[$methodGroup['validityMethod'] . '() with ' . lcfirst($caseName) . ' in a sentence'] = [
+                    '$methodName'     => $methodGroup['validityMethod'],
+                    '$argument'       => sprintf('A sentence with %s in it.', $classPairs[$methodGroup['input']]),
+                    '$expectedResult' => false,
+                ];
             }
             foreach ($nonReflectionBuiltinClasses as $caseName => $classArr) {
                 $result[$methodGroup['filterTextMethod'] . '() with non-reflection ' . lcfirst($caseName)] = [
@@ -206,6 +229,16 @@ class ReflectionMetaInfoTest extends TestCaseBase
                     '$methodName'     => $methodGroup['filterTextMethod'],
                     '$argument'       => $fakeParsedClass,
                     '$expectedResult' => $fakeParsedClass,
+                ];
+                $result[$methodGroup['validityMethod'] . '() with non-reflection ' . lcfirst($caseName)] = [
+                    '$methodName'     => $methodGroup['validityMethod'],
+                    '$argument'       => $classArr['$class'],
+                    '$expectedResult' => false,
+                ];
+                $result[$methodGroup['validityMethod'] . '() with fake parsed reflection ' . lcfirst($caseName)] = [
+                    '$methodName'     => $methodGroup['validityMethod'],
+                    '$argument'       => $fakeParsedClass,
+                    '$expectedResult' => false,
                 ];
             }
         }

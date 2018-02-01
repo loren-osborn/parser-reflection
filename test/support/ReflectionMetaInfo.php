@@ -18,6 +18,18 @@ class ReflectionMetaInfo
 {
 
     /**
+     * Check if the input is a native reflection class.
+     *
+     * @param string $nativeClass The name of the native reflection class.
+     *
+     * @return boolean Is a native class?
+     */
+    public function isNativeClass($nativeClass)
+    {
+        return preg_match('/^\\\\?Reflect(ion([A-Z]\\w*)?|or)$/', $nativeClass);
+    }
+
+    /**
      * Returns the parsed reflection class equivilant to the given native class.
      *
      * @param string $nativeClass The name of the native reflection class.
@@ -26,7 +38,7 @@ class ReflectionMetaInfo
      */
     public function getParsedClass($nativeClass)
     {
-        if (!preg_match('/^\\\\?Reflect(ion([A-Z]\\w*)?|or)$/', $nativeClass)) {
+        if (!$this->isNativeClass($nativeClass)) {
             throw new InvalidArgumentException("$nativeClass not a builtin Reflection class.");
         }
         return preg_replace('/^(\\\\?)/', '\\1Go\\\\ParserReflection\\\\', $nativeClass);
@@ -48,6 +60,18 @@ class ReflectionMetaInfo
     }
 
     /**
+     * Check if the input is a parsed reflection class.
+     *
+     * @param string $nativeClass The name of the parsed reflection class.
+     *
+     * @return boolean Is a parsed class?
+     */
+    public function isParsedClass($parsedClass)
+    {
+        return preg_match('/^\\\\?Go\\\\ParserReflection\\\\Reflect(ion([A-Z]\\w*)?|or)$/', $parsedClass);
+    }
+
+    /**
      * Returns the native reflection class equivilant to the given parsed class.
      *
      * @param string $parsedClass The name of the native reflection class.
@@ -56,7 +80,7 @@ class ReflectionMetaInfo
      */
     public function getNativeClass($parsedClass)
     {
-        if (!preg_match('/^\\\\?Go\\\\ParserReflection\\\\Reflect(ion([A-Z]\\w*)?|or)$/', $parsedClass)) {
+        if (!$this->isParsedClass($parsedClass)) {
             throw new InvalidArgumentException("$parsedClass not a parsed Reflection class.");
         }
         return preg_replace('/^(\\\\?)Go\\\\ParserReflection\\\\/', '\\1', $parsedClass);
