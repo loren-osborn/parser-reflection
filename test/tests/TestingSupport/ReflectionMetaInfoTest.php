@@ -128,132 +128,138 @@ class ReflectionMetaInfoTest extends TestCaseBase
         return $result;
     }
 
-    public function getValidMethodsWithSingleArgAndExpectedOutput()
+    public function getMethodGroupInfos()
     {
-        $reflectionClassPairs        = $this->getReflectionClassPairsCases();
-        $nonReflectionBuiltinClasses = $this->getNonReflectionBuiltInClassCases();
-        $result = [
-            'replaceNativeClasses() with prose' => [
-                '$methodName' => 'replaceNativeClasses',
-                '$argument'         => 'Four score and seven years ago...',
-                '$expectedResult'   => 'Four score and seven years ago...',
+        return [
+            [
+                'convertMethod'    => 'getParsedClass',
+                'filterTextMethod' => 'replaceNativeClasses',
+                'input'            => '$nativeClass',
+                'output'           => '$parsedClass',
+                'typeExpected'     => 'builtin',
             ],
-            'replaceParsedClasses() with prose' => [
-                '$methodName' => 'replaceParsedClasses',
-                '$argument'         => 'Four score and seven years ago...',
-                '$expectedResult'   => 'Four score and seven years ago...',
+            [
+                'convertMethod'    => 'getNativeClass',
+                'filterTextMethod' => 'replaceParsedClasses',
+                'input'            => '$parsedClass',
+                'output'           => '$nativeClass',
+                'typeExpected'     => 'parsed',
             ],
         ];
-        foreach ($reflectionClassPairs as $caseName => $classPairs) {
-            $result['getParsedClass() with ' . lcfirst($caseName)] = [
-                '$methodName' => 'getParsedClass',
-                '$argument'         => $classPairs['$nativeClass'],
-                '$expectedResult'   => $classPairs['$parsedClass'],
-            ];
-            $result['getNativeClass() with ' . lcfirst($caseName)] = [
-                '$methodName' => 'getNativeClass',
-                '$argument'         => $classPairs['$parsedClass'],
-                '$expectedResult'   => $classPairs['$nativeClass'],
-            ];
-            $result['replaceNativeClasses() with ' . lcfirst($caseName)] = [
-                '$methodName' => 'replaceNativeClasses',
-                '$argument'         => $classPairs['$nativeClass'],
-                '$expectedResult'   => $classPairs['$parsedClass'],
-            ];
-            $result['replaceParsedClasses() with ' . lcfirst($caseName)] = [
-                '$methodName' => 'replaceParsedClasses',
-                '$argument'         => $classPairs['$parsedClass'],
-                '$expectedResult'   => $classPairs['$nativeClass'],
-            ];
-            $result['replaceNativeClasses() with backwards ' . lcfirst($caseName)] = [
-                '$methodName' => 'replaceNativeClasses',
-                '$argument'         => $classPairs['$parsedClass'],
-                '$expectedResult'   => $classPairs['$parsedClass'],
-            ];
-            $result['replaceParsedClasses() with backwards ' . lcfirst($caseName)] = [
-                '$methodName' => 'replaceParsedClasses',
-                '$argument'         => $classPairs['$nativeClass'],
-                '$expectedResult'   => $classPairs['$nativeClass'],
-            ];
-            $result['replaceNativeClasses() with ' . lcfirst($caseName) . ' in a sentence'] = [
-                '$methodName' => 'replaceNativeClasses',
-                '$argument'         => sprintf('A sentence with %s in it.', $classPairs['$nativeClass']),
-                '$expectedResult'   => sprintf('A sentence with %s in it.', $classPairs['$parsedClass']),
-            ];
-            $result['replaceParsedClasses() with ' . lcfirst($caseName) . ' in a sentence'] = [
-                '$methodName' => 'replaceParsedClasses',
-                '$argument'         => sprintf('A sentence with %s in it.', $classPairs['$parsedClass']),
-                '$expectedResult'   => sprintf('A sentence with %s in it.', $classPairs['$nativeClass']),
-            ];
+    }
+
+    public function getValidMethodsWithSingleArgAndExpectedOutput()
+    {
+        $result                      = [];
+        $reflectionClassPairs        = $this->getReflectionClassPairsCases();
+        $nonReflectionBuiltinClasses = $this->getNonReflectionBuiltInClassCases();
+        $methodGroupInfos            = $this->getMethodGroupInfos();
+        $testSamples                 = [
+            'I do not like green eggs and ham.',
+            'Four score and seven years ago...',
+        ];
+        foreach ($methodGroupInfos as $methodGroup) {
+            foreach ($testSamples as $idx => $text) {
+                $testCase          = sprintf(
+                    '%s() with prose %u',
+                    $methodGroup['filterTextMethod'],
+                    $idx + 1);
+                $result[$testCase] = [
+                    '$methodName'     => $methodGroup['filterTextMethod'],
+                    '$argument'       => $text,
+                    '$expectedResult' => $text,
+                ];
+            }
         }
-        foreach ($nonReflectionBuiltinClasses as $caseName => $classArr) {
-            $result['replaceNativeClasses() with non-reflection ' . lcfirst($caseName)] = [
-                '$methodName' => 'replaceNativeClasses',
-                '$argument'         => $classArr['$class'],
-                '$expectedResult'   => $classArr['$class'],
-            ];
-            $result['replaceParsedClasses() with non-reflection ' . lcfirst($caseName)] = [
-                '$methodName' => 'replaceParsedClasses',
-                '$argument'         => $classArr['$class'],
-                '$expectedResult'   => $classArr['$class'],
-            ];
-            $fakeParsedClass = preg_replace('/^(\\\\?)/', '\\1Go\\\\ParserReflection\\\\', $classArr['$class']);
-            $fakeClassCaseName = 'replaceParsedClasses() with fake reflection ' . lcfirst(str_replace($classArr['$class'], $fakeParsedClass, $caseName));
-            $result[$fakeClassCaseName] = [
-                '$methodName' => 'replaceParsedClasses',
-                '$argument'         => $fakeParsedClass,
-                '$expectedResult'   => $fakeParsedClass,
-            ];
+        foreach ($methodGroupInfos as $methodGroup) {
+            foreach ($reflectionClassPairs as $caseName => $classPairs) {
+                $result[$methodGroup['convertMethod'] . '() with ' . lcfirst($caseName)] = [
+                    '$methodName'     => $methodGroup['convertMethod'],
+                    '$argument'       => $classPairs[$methodGroup['input']],
+                    '$expectedResult' => $classPairs[$methodGroup['output']],
+                ];
+                $result[$methodGroup['filterTextMethod'] . '() with ' . lcfirst($caseName)] = [
+                    '$methodName'     => $methodGroup['filterTextMethod'],
+                    '$argument'       => $classPairs[$methodGroup['input']],
+                    '$expectedResult' => $classPairs[$methodGroup['output']],
+                ];
+                $result[$methodGroup['filterTextMethod'] . '() with backwards ' . lcfirst($caseName)] = [
+                    '$methodName'     => $methodGroup['filterTextMethod'],
+                    '$argument'       => $classPairs[$methodGroup['output']],
+                    '$expectedResult' => $classPairs[$methodGroup['output']],
+                ];
+                $result[$methodGroup['filterTextMethod'] . '() with ' . lcfirst($caseName) . ' in a sentence'] = [
+                    '$methodName'     => $methodGroup['filterTextMethod'],
+                    '$argument'       => sprintf('A sentence with %s in it.', $classPairs[$methodGroup['input']]),
+                    '$expectedResult' => sprintf('A sentence with %s in it.', $classPairs[$methodGroup['output']]),
+                ];
+            }
+            foreach ($nonReflectionBuiltinClasses as $caseName => $classArr) {
+                $result[$methodGroup['filterTextMethod'] . '() with non-reflection ' . lcfirst($caseName)] = [
+                    '$methodName'     => $methodGroup['filterTextMethod'],
+                    '$argument'       => $classArr['$class'],
+                    '$expectedResult' => $classArr['$class'],
+                ];
+                $fakeParsedClass = preg_replace('/^(\\\\?)/', '\\1Go\\\\ParserReflection\\\\', $classArr['$class']);
+                $fakeClassCaseName = $methodGroup['filterTextMethod'] . '() with fake parsed reflection ' . lcfirst(str_replace($classArr['$class'], $fakeParsedClass, $caseName));
+                $result[$fakeClassCaseName] = [
+                    '$methodName'     => $methodGroup['filterTextMethod'],
+                    '$argument'       => $fakeParsedClass,
+                    '$expectedResult' => $fakeParsedClass,
+                ];
+            }
         }
         return $result;
     }
 
     public function getInvalidMethodsWithSingleArgAndExpectedExceptionMessage()
     {
+        $result                      = [];
         $reflectionClassPairs        = $this->getReflectionClassPairsCases();
         $nonReflectionBuiltinClasses = $this->getNonReflectionBuiltInClassCases();
-        $result = [];
-        foreach ($reflectionClassPairs as $caseName => $classPairs) {
-            $result['getParsedClass() with backwards ' . lcfirst($caseName)] = [
-                '$methodName' => 'getParsedClass',
-                '$argument'         => $classPairs['$parsedClass'],
-                '$expectedMessage'  => $classPairs['$parsedClass'] . ' not a builtin Reflection class.',
-            ];
-            $result['getNativeClass() with backwards ' . lcfirst($caseName)] = [
-                '$methodName' => 'getNativeClass',
-                '$argument'         => $classPairs['$nativeClass'],
-                '$expectedMessage'  => $classPairs['$nativeClass'] . ' not a parsed Reflection class.',
-            ];
-            $result['getParsedClass() with ' . lcfirst($caseName) . ' in a sentence'] = [
-                '$methodName' => 'getParsedClass',
-                '$argument'         => sprintf('A sentence with %s in it.', $classPairs['$nativeClass']),
-                '$expectedResult'   => sprintf('A sentence with %s in it. not a builtin Reflection class.', $classPairs['$nativeClass']),
-            ];
-            $result['getNativeClass() with ' . lcfirst($caseName) . ' in a sentence'] = [
-                '$methodName' => 'getNativeClass',
-                '$argument'         => sprintf('A sentence with %s in it.', $classPairs['$parsedClass']),
-                '$expectedResult'   => sprintf('A sentence with %s in it. not a parsed Reflection class.', $classPairs['$parsedClass']),
-            ];
-        }
-        foreach ($nonReflectionBuiltinClasses as $caseName => $classArr) {
-            $result['getParsedClass() with non-reflection ' . lcfirst($caseName)] = [
-                '$methodName' => 'getParsedClass',
-                '$argument'         => $classArr['$class'],
-                '$expectedMessage'  => $classArr['$class'] . ' not a builtin Reflection class.',
-            ];
-            $result['getNativeClass() with non-reflection ' . lcfirst($caseName)] = [
-                '$methodName' => 'getNativeClass',
-                '$argument'         => $classArr['$class'],
-                '$expectedMessage'  => $classArr['$class'] . ' not a parsed Reflection class.',
-            ];
-            $fakeParsedClass = preg_replace('/^(\\\\?)/', '\\1Go\\\\ParserReflection\\\\', $classArr['$class']);
-            $fakeClassCaseName = 'getNativeClass() with fake reflection ' . lcfirst(str_replace($classArr['$class'], $fakeParsedClass, $caseName));
-            $result[$fakeClassCaseName] = [
-                '$methodName' => 'getNativeClass',
-                '$argument'         => $fakeParsedClass,
-                '$expectedMessage'  => $fakeParsedClass . ' not a parsed Reflection class.',
-            ];
+        $methodGroupInfos            = $this->getMethodGroupInfos();
+        foreach ($methodGroupInfos as $methodGroup) {
+            foreach ($reflectionClassPairs as $caseName => $classPairs) {
+                $result[$methodGroup['convertMethod'] . '() with backwards ' . lcfirst($caseName)] = [
+                    '$methodName'      => $methodGroup['convertMethod'],
+                    '$argument'        => $classPairs[$methodGroup['output']],
+                    '$expectedMessage' => sprintf(
+                        '%s not a %s Reflection class.',
+                        $classPairs[$methodGroup['output']],
+                        $methodGroup['typeExpected']),
+                ];
+                $result[$methodGroup['convertMethod'] . '() with ' . lcfirst($caseName) . ' in a sentence'] = [
+                    '$methodName'     => $methodGroup['convertMethod'],
+                    '$argument'       => sprintf(
+                        'A sentence with %s in it.',
+                        $classPairs[$methodGroup['input']]),
+                    '$expectedResult' => sprintf(
+                        'A sentence with %s in it. not a %s Reflection class.',
+                        $classPairs[$methodGroup['input']],
+                        $methodGroup['typeExpected']),
+                ];
+            }
+            foreach ($nonReflectionBuiltinClasses as $caseName => $classArr) {
+                $result[$methodGroup['convertMethod'] . '() with non-reflection ' . lcfirst($caseName)] = [
+                    '$methodName'     => $methodGroup['convertMethod'],
+                    '$argument'       => $classArr['$class'],
+                    '$expectedResult' => sprintf(
+                        '%s not a %s Reflection class.',
+                        $classArr['$class'],
+                        $methodGroup['typeExpected']),
+                ];
+                $fakeParsedClass = preg_replace('/^(\\\\?)/', '\\1Go\\\\ParserReflection\\\\', $classArr['$class']);
+                $fakeClassCaseName = $methodGroup['convertMethod'] . '() with fake reflection ' . lcfirst(str_replace($classArr['$class'], $fakeParsedClass, $caseName));
+                $result[$fakeClassCaseName] = [
+                    '$methodName'     => $methodGroup['convertMethod'],
+                    '$argument'       => $fakeParsedClass,
+                    '$expectedResult' => sprintf(
+                        '%s not a %s Reflection class.',
+                        $fakeParsedClass,
+                        $methodGroup['typeExpected']),
+                ];
+            }
         }
         return $result;
-    } 
+    }
 }
