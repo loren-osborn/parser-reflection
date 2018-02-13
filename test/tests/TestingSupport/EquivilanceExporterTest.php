@@ -29,7 +29,7 @@ class EquivilanceExporterTest extends ParsedEquivilantComparitorTestBase
      * @param string                $expectedComparisonType   IGNORED type of comparison.
      * @param null|string           $testSkipReason           If non-null forces test to be skipped.
      *
-     * @dataProvider getConstructorValuesWithExpectedState
+     * @dataProvider getExpectedSerializerOutput
      */
     public function testExport(
         $value,

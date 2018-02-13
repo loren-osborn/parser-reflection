@@ -9,11 +9,12 @@
  */
 namespace Go\ParserReflection\Tests\TestingSupport;
 
-use Go\ParserReflection\Tests\TestCaseBase;
+use Go\ParserReflection\Tests\TestingSupport\ParsedEquivilantComparitorTestBase;
 use Go\ParserReflection\TestingSupport\ReflectionMetaInfo;
+use ReflectionClass;
 use InvalidArgumentException;
 
-class ReflectionMetaInfoTest extends TestCaseBase
+class ReflectionMetaInfoTest extends ParsedEquivilantComparitorTestBase
 {
     /**
      * Tests ReflectionMetaInfo methods
@@ -294,5 +295,33 @@ class ReflectionMetaInfoTest extends TestCaseBase
             }
         }
         return $result;
+    }
+
+    /**
+     * Tests ReflectionMetaInfo getConstructorArgs() method
+     *
+     * @dataProvider getTestableConstructorArgLists
+     *
+     * @param string   $class            The class name to test.
+     * @param array    $expectedArgList  The argument list to pass.
+     * @param boolean  $filterStrings    Should expected string args be filtered
+     *                                       through replaceNativeClasses()?
+     */
+    public function testGetConstructorArgs(
+        $class,
+        $expectedArgList,
+        $filterStrings)
+    {
+        $classReflection = null;
+        if (class_exists($class)) {
+            $classReflection = new ReflectionClass($class);
+        }
+        if (!$classReflection || $classReflection->isUserDefined()) {
+            $this->markTestSkipped("Class $class not available in this PHP version.");
+        }
+        $objectUnderTest = new ReflectionMetaInfo();
+        $object          = $classReflection->newInstanceArgs(array_values($expectedArgList));
+        $actualArgList   = $objectUnderTest->getConstructorArgs($object);
+        $this->assertSame($expectedArgList, $actualArgList, 'Returned original argument list');
     }
 }

@@ -39,85 +39,6 @@ class EquivilanceExporter extends Exporter
     }
 
     /**
-     * Get constructor arguments that would yeild reflection class object.
-     *
-     * @param  Reflector|ReflectionException $obj  The object to inspect
-     * @return array  Constructor arguments that would create equivilant object.
-     *
-     */
-    private function getConstructorArgs($obj)
-    {
-        $constructorParamsByClassName = [
-            'ReflectionClass'         => ['name'],
-            'ReflectionClassConstant' => [
-                [
-                    'name'      => 'class',
-                    'callChain' => ['getDeclaringClass', 'getName']
-                ],
-                'name'
-            ],
-            'ReflectionZendExtension' => ['name'],
-            // ...
-            'ReflectionException'     => [
-                'message',
-                [
-                    'name'         => 'code',
-                    'defaultValue' => 0,
-                ],
-                [
-                    'name'         => 'previous',
-                    'defaultValue' => null,
-                ],
-            ],
-        ];
-        $class = get_class($obj);
-        if ($obj instanceof \Exception) {
-            $class = 'ReflectionException';
-        }
-        if (!array_key_exists($class, $constructorParamsByClassName)) {
-            throw new \Exception(sprintf('INTERNAL ERROR: EquivilanceExport params for class %s not implemented.', $class));
-        }
-        $result        = [];
-        $supressedDefaultValues = [];
-        foreach ($constructorParamsByClassName[$class] as $paramNameSpec) {
-           $normalizedSpec = $paramNameSpec;
-            if (is_string($paramNameSpec)) {
-                $normalizedSpec = ['name' => $paramNameSpec];
-            }
-            if (!array_key_exists('getValueFrom', $normalizedSpec)) {
-                if (!array_key_exists('callChain', $normalizedSpec)) {
-                    $normalizedSpec['callChain'] = ['get' . ucfirst($normalizedSpec['name'])];
-                }
-                $normalizedSpec['getValueFrom'] = (function ($inObj) use ($normalizedSpec) {
-                    $outVal = $inObj;
-                    foreach ($normalizedSpec['callChain'] as $methodName) {
-                        $outVal = $outVal->$methodName();
-                    }
-                    return $outVal;
-                });
-            }
-            $getValueFrom = $normalizedSpec['getValueFrom'];
-            $paramVal     = $getValueFrom($obj);
-            if (
-                !array_key_exists('defaultValue', $normalizedSpec) ||
-                ($paramVal !== $normalizedSpec['defaultValue'])
-            ) {
-                if (count($supressedDefaultValues) > 0) {
-                    foreach ($supressedDefaultValues as $defaultParamName => $defaultParamVal) {
-                        $result[$defaultParamName] = $defaultParamVal;
-                    }
-                    $supressedDefaultValues = [];
-                }
-                $result[$normalizedSpec['name']] = $paramVal;
-            }
-            else {
-                $supressedDefaultValues[$normalizedSpec['name']] = $paramVal;
-            }
-        }
-        return $result;
-    }
-
-    /**
      * Recursive implementation of export
      *
      * @param  mixed    $value        The value to export
@@ -156,7 +77,7 @@ class EquivilanceExporter extends Exporter
                 $hash = $processed->equivilantKeyLookup[$origHash];
                 return sprintf('%s Object &%s', $class, $hash);
             }
-            $constructorArgs = $this->getConstructorArgs($value);
+            $constructorArgs = $this->metaInfo->getConstructorArgs($value);
             if ($valueIsReflectorObject) {
                 foreach ($constructorArgs as $argName => $argVal) {
                     if (is_string($argVal)) {

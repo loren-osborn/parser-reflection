@@ -15,7 +15,131 @@ use SebastianBergmann\Exporter\Exporter;
 
 class ParsedEquivilantComparitorTestBase extends TestCaseBase
 {
-    public function getConstructorValuesWithExpectedState()
+    public function getTestableConstructorArgLists()
+    {
+        $origExceptionMessageClass    = 'ReflectionClassConstant';
+        $origExceptionMessageTemplate = 'Error calling %s::methodName() do re mi';
+        $previousException            = new \Exception('Testing...', 7);
+        $generator                    = (function () {
+            foreach ([1, 2, 3, 4] as $number) {
+                yield $number;
+            }
+        })();
+        return [
+            'ReflectionClass' =>
+            [
+                '$class'         => 'ReflectionClass',
+                '$argList'       => ['name' => 'DateTime'],
+                '$filterStrings' => false,
+            ],
+            'ReflectionException' =>
+            [
+                '$class'         => 'ReflectionException',
+                '$argList'       => [
+                    'message'  => sprintf($origExceptionMessageTemplate, $origExceptionMessageClass),
+                    'code'     => 42,
+                    'previous' => $previousException
+                ],
+                '$filterStrings' => true,
+            ],
+            'ReflectionException without optional arguments' =>
+            [
+                '$class'         => 'ReflectionException',
+                '$argList'       => ['message' => 'Testing abc123 bar'],
+                '$filterStrings' => true,
+            ],
+            'ReflectionException with single non-default optional argument' =>
+            [
+                '$class'         => 'ReflectionException',
+                '$argList'       => [
+                    'message'  => 'Testing abc123 bar',
+                    'code'     => 0,
+                    'previous' => $previousException
+                ],
+                '$filterStrings' => true,
+            ],
+            'ReflectionClassConstant' =>
+            [
+                '$class'         => 'ReflectionClassConstant',
+                '$argList'       => ['class' => 'DateTime', 'name' => 'ATOM'],
+                '$filterStrings' => false,
+            ],
+            'ReflectionExtension' =>
+            [
+                '$class'         => 'ReflectionExtension',
+                '$argList'       => ['name' => 'calendar'],
+                '$filterStrings' => false,
+            ],
+            'ReflectionFunction' =>
+            [
+                '$class'         => 'ReflectionFunction',
+                '$argList'       => ['name' => 'preg_match'],
+                '$filterStrings' => false,
+            ],
+            'ReflectionFunction with closure' =>
+            [
+                '$class'         => 'ReflectionFunction',
+                '$argList'       => ['name' => (function () {})],
+                '$filterStrings' => false,
+            ],
+            'ReflectionMethod' =>
+            [
+                '$class'         => 'ReflectionMethod',
+                '$argList'       => ['class' => 'DateTime', 'name' => 'setTime'],
+                '$filterStrings' => false,
+            ],
+            'ReflectionParameter' =>
+            [
+                '$class'         => 'ReflectionParameter',
+                '$argList'       => ['function' => 'preg_match', 'parameter' => 'subject'],
+                '$filterStrings' => false,
+            ],
+            'ReflectionParameter for method' =>
+            [
+                '$class'         => 'ReflectionParameter',
+                '$argList'       => ['function' => ['DateTime', 'setTime'], 'parameter' => 'minute'],
+                '$filterStrings' => false,
+            ],
+            'ReflectionParameter for unbound closure' =>
+            [
+                '$class'         => 'ReflectionParameter',
+                '$argList'       => [
+                    'function' => \Closure::bind(function ($fee, $figh, $foe) {}, null, null),
+                    'parameter' => 'foe'
+                ],
+                '$filterStrings' => false,
+            ],
+            // 'BROKEN ReflectionParameter for bound closure' =>
+            // [
+            //     '$class'         => 'ReflectionParameter',
+            //     '$argList'       => [
+            //         'function' => function ($fee, $figh, $foe) {},
+            //         'parameter' => 'foe'
+            //     ],
+            //     '$filterStrings' => false,
+            // ],
+            'ReflectionProperty' =>
+            [
+                '$class'         => 'ReflectionProperty',
+                '$argList'       => [
+                    'class' => 'Exception',
+                    'name'  => 'message'
+                ],
+                '$filterStrings' => false,
+            ],
+            'ReflectionGenerator' =>
+            [
+                '$class'         => 'ReflectionGenerator',
+                '$argList'       => [
+                    'generator' => $generator
+                ],
+                '$filterStrings' => false,
+            ],
+        ];
+        return $result;
+    }
+
+    public function getExpectedSerializerOutput()
     {
         $origExceptionMessageClass    = 'ReflectionClassConstant';
         $origExceptionMessageTemplate = 'Error calling %s::methodName() do re mi';

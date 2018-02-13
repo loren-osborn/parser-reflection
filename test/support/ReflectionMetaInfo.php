@@ -100,4 +100,148 @@ class ReflectionMetaInfo
                     '\\1\\2',
                     $input);
     }
+
+    /**
+     * Get constructor arguments that would yeild reflection class object.
+     *
+     * @param  Reflector|ReflectionException $obj  The object to inspect
+     * @return array  Constructor arguments that would create equivilant object.
+     *
+     */
+    public function getConstructorArgs($obj)
+    {
+        $getFunctionNameParameter = (function ($refFunc) {
+            if ($refFunc instanceof \ReflectionFunction) {
+                if ($refFunc->isClosure()) {
+                    // getClosure() is not as documented for closures:
+                    // It returns the ORIGINAL closure, rather than a new
+                    // dynamically created one.
+                    return $refFunc->getClosure();
+                }
+                return $refFunc->getName();
+            }
+            if ($refFunc instanceof \ReflectionMethod) {
+                if ($refFunc->isClosure()) {
+                    throw new \Exception("Edge case: Unable to extract original Closure from ReflectionMethod.");
+                }
+                return [
+                    $refFunc->getDeclaringClass()->getName(),
+                    $refFunc->getName(),
+                ];
+            }
+            throw new \Exception("INTERNAL ERROR: Parameter's declaring function is neither ReflectionFunction or ReflectionMethod");
+        });
+        $constructorParamsByClassName = [
+            'ReflectionClass'         => ['name'],
+            'ReflectionClassConstant' => [
+                [
+                    'name'      => 'class',
+                    'callChain' => ['getDeclaringClass', 'getName'],
+                ],
+                'name'
+            ],
+            'ReflectionException'     => [
+                'message',
+                [
+                    'name'         => 'code',
+                    'defaultValue' => 0,
+                ],
+                [
+                    'name'         => 'previous',
+                    'defaultValue' => null,
+                ],
+            ],
+            'ReflectionExtension' => ['name'],
+            'ReflectionFunction'  => [
+                [
+                    'name'         => 'name',
+                    'getValueFrom' => $getFunctionNameParameter,
+                ],
+            ],
+            'ReflectionMethod' => [
+                [
+                    'name'      => 'class',
+                    'callChain' => ['getDeclaringClass', 'getName'],
+                ],
+                'name'
+            ],
+            'ReflectionParameter' => [
+                [
+                    'name'         => 'function',
+                    'getValueFrom' =>
+                        (function ($refParam) use ($getFunctionNameParameter) {
+                            $refFunc = $refParam->getDeclaringFunction();
+                            return $getFunctionNameParameter($refFunc);
+                        }),
+                ],
+                [
+                    'name'      => 'parameter',
+                    'callChain' => ['getName']
+                ],
+            ],
+            'ReflectionProperty' => [
+                [
+                    'name'      => 'class',
+                    'callChain' => ['getDeclaringClass', 'getName'],
+                ],
+                'name'
+            ],
+            'ReflectionGenerator' => [
+                [
+                    'name'      => 'generator',
+                    'callChain' => ['getExecutingGenerator'],
+                ],
+            ],
+            // Untested but unused: (Here for completeness)
+            'ReflectionZendExtension' => ['name'],
+        ];
+        $class = get_class($obj);
+        if ($obj instanceof \Exception) {
+            $class = 'ReflectionException';
+        }
+        if (!array_key_exists($class, $constructorParamsByClassName)) {
+            throw new \Exception(sprintf('INTERNAL ERROR: EquivilanceExport params for class %s not implemented.', $class));
+        }
+        $result                 = [];
+        $supressedDefaultValues = [];
+        foreach ($constructorParamsByClassName[$class] as $paramNameSpec) {
+           $normalizedSpec = $paramNameSpec;
+            if (is_string($paramNameSpec)) {
+                $normalizedSpec = ['name' => $paramNameSpec];
+            }
+            if (!is_array($normalizedSpec)) {
+                throw new \Exception(sprintf('$normalizedSpec [%s] should be an array at this point.', var_export($normalizedSpec, true)));
+            }
+            if (!array_key_exists('getValueFrom', $normalizedSpec)) {
+                if (!array_key_exists('callChain', $normalizedSpec)) {
+                    $normalizedSpec['callChain'] = ['get' . ucfirst($normalizedSpec['name'])];
+                }
+                $normalizedSpec['getValueFrom'] = (function ($inObj) use ($normalizedSpec) {
+                    $outVal = $inObj;
+                    foreach ($normalizedSpec['callChain'] as $methodName) {
+                        $outVal = $outVal->$methodName();
+                    }
+                    return $outVal;
+                });
+            }
+            $getValueFrom = $normalizedSpec['getValueFrom'];
+            $paramVal     = $getValueFrom($obj);
+            if (
+                !array_key_exists('defaultValue', $normalizedSpec) ||
+                ($paramVal !== $normalizedSpec['defaultValue'])
+            ) {
+                if (count($supressedDefaultValues) > 0) {
+                    foreach ($supressedDefaultValues as $defaultParamName => $defaultParamVal) {
+                        $result[$defaultParamName] = $defaultParamVal;
+                    }
+                    $supressedDefaultValues = [];
+                }
+                $result[$normalizedSpec['name']] = $paramVal;
+            }
+            else {
+                $supressedDefaultValues[$normalizedSpec['name']] = $paramVal;
+            }
+        }
+        return $result;
+    }
 }

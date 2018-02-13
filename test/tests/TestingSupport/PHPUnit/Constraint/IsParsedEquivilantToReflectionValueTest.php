@@ -48,7 +48,7 @@ class IsParsedEquivilantToReflectionValueTest extends ParsedEquivilantComparitor
      * @param string                $expectedComparisonType   Type of comparison.
      * @param null|string           $testSkipReason           If non-null forces test to be skipped.
      *
-     * @dataProvider getConstructorValuesWithExpectedState
+     * @dataProvider getExpectedSerializerOutput
      */
     public function testToString(
         $value,
