@@ -77,19 +77,27 @@ class EquivilanceExporter extends Exporter
                 $hash = $processed->equivilantKeyLookup[$origHash];
                 return sprintf('%s Object &%s', $class, $hash);
             }
-            $constructorArgs = $this->metaInfo->getConstructorArgs($value);
+            $reflectionInfo = $this->metaInfo->getReflectionRepresentation($value);
+            $displayValues  = $reflectionInfo['displayValues'];
             if ($valueIsReflectorObject) {
-                foreach ($constructorArgs as $argName => $argVal) {
-                    if (is_string($argVal)) {
-                        $constructorArgs[$argName] = $this->metaInfo->replaceNativeClasses($argVal);
+                foreach ($displayValues as $argName => $argValInfo) {
+                    if (($argValInfo['type'] == 'value') && is_string($argValInfo['value'])) {
+                        $displayValues[$argName]['value'] = $this->metaInfo->replaceNativeClasses($argValInfo['value']);
                     }
                 }
             }
+            $properties = [];
+            foreach ($displayValues as $argName => $argValInfo) {
+                if (($argValInfo['type'] != 'value')) {
+                    throw new \Exception('Not implemented yet.');
+                }
+                $properties[$argName] = $argValInfo['value'];
+            }
             $nested                         = isset($processed->shortenNestedOutput);
             $processed->shortenNestedOutput = true;
-            $rawOut                         = parent::recursiveExport($constructorArgs, $indentation, $processed);
+            $rawOut                         = parent::recursiveExport($properties, $indentation, $processed);
             $origHash                       = $processed->add($value);
-            $hash                           = $processed->contains($constructorArgs);
+            $hash                           = $processed->contains($properties);
             if (!$nested) {
                 unset($processed->shortenNestedOutput);
             }

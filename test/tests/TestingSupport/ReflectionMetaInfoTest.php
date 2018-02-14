@@ -11,7 +11,6 @@ namespace Go\ParserReflection\Tests\TestingSupport;
 
 use Go\ParserReflection\Tests\TestingSupport\ParsedEquivilantComparitorTestBase;
 use Go\ParserReflection\TestingSupport\ReflectionMetaInfo;
-use ReflectionClass;
 use InvalidArgumentException;
 
 class ReflectionMetaInfoTest extends ParsedEquivilantComparitorTestBase
@@ -298,30 +297,37 @@ class ReflectionMetaInfoTest extends ParsedEquivilantComparitorTestBase
     }
 
     /**
-     * Tests ReflectionMetaInfo getConstructorArgs() method
+     * Tests ReflectionMetaInfo getReflectionRepresentation() method
      *
-     * @dataProvider getTestableConstructorArgLists
+     * @dataProvider getReflectionRepresentations
      *
-     * @param string   $class            The class name to test.
-     * @param array    $expectedArgList  The argument list to pass.
-     * @param boolean  $filterStrings    Should expected string args be filtered
-     *                                       through replaceNativeClasses()?
+     * @param string       $class                   The class name to test.
+     * @param callable     $createFunc              Closure to create test object.
+     * @param array        $expectedRepresentation  The argument list to pass.
+     * @param null|string  $skipTestMessage         If non-null, why the test should be skipped?
+     * @param boolean      $filterStrings           Should expected string args be filtered
+     *                                                  through replaceNativeClasses()?
      */
-    public function testGetConstructorArgs(
+    public function testGetReflectionRepresentation(
         $class,
-        $expectedArgList,
+        callable $createFunc,
+        array $expectedRepresentation,
+        $skipTestMessage,
         $filterStrings)
     {
-        $classReflection = null;
-        if (class_exists($class)) {
-            $classReflection = new ReflectionClass($class);
-        }
-        if (!$classReflection || $classReflection->isUserDefined()) {
-            $this->markTestSkipped("Class $class not available in this PHP version.");
+        if (!is_null($skipTestMessage)) {
+            $this->markTestSkipped($skipTestMessage);
         }
         $objectUnderTest = new ReflectionMetaInfo();
-        $object          = $classReflection->newInstanceArgs(array_values($expectedArgList));
-        $actualArgList   = $objectUnderTest->getConstructorArgs($object);
-        $this->assertSame($expectedArgList, $actualArgList, 'Returned original argument list');
+        $reflectionObj   = $createFunc();
+        $representation  = $objectUnderTest->getReflectionRepresentation($reflectionObj);
+        $this->assertSame($class, get_class($reflectionObj), 'Constructed object of correct class, (Derived class not allowed.)');
+        $this->assertSame($expectedRepresentation, $representation, "Returned correct output");
+        $this->assertArrayHasKey('class', $representation, "'class' is a required key.");
+        $this->assertArrayHasKey('displayValues', $representation, "'displayValues' is a required key.");
+        foreach ($representation as $key => $value) {
+            $this->assertContains($key, ['class', 'constructorArgs', 'displayValues'], 'Allowed representation keys');
+        }
+        $this->assertSame($class, $representation['class'], 'Returned correct class');
     }
 }

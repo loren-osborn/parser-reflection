@@ -108,28 +108,51 @@ class ReflectionMetaInfo
      * @return array  Constructor arguments that would create equivilant object.
      *
      */
-    public function getConstructorArgs($obj)
+    public function getReflectionRepresentation($obj)
     {
         $getFunctionNameParameter = (function ($refFunc) {
+            $fileLineInfo = [];
+            if ($refFunc->getFileName()) {
+                $fileLineInfo['file']  = $refFunc->getFileName();
+                $fileLineInfo['lines'] = $refFunc->getStartLine();
+                if ($refFunc->getStartLine() != $refFunc->getEndLine()) {
+                    $fileLineInfo['lines'] .= '-' . $refFunc->getEndLine();
+                }
+            }
             if ($refFunc instanceof \ReflectionFunction) {
                 if ($refFunc->isClosure()) {
                     // getClosure() is not as documented for closures:
                     // It returns the ORIGINAL closure, rather than a new
                     // dynamically created one.
-                    return $refFunc->getClosure();
+                    return array_merge(
+                        [
+                            'type'   => 'Closure',
+                            'value'  => $refFunc->getClosure(),
+                        ],
+                        $fileLineInfo);
                 }
-                return $refFunc->getName();
+                return [
+                    'type'   => 'value',
+                    'value'  => $refFunc->getName(),
+                ];
             }
             if ($refFunc instanceof \ReflectionMethod) {
                 if ($refFunc->isClosure()) {
-                    throw new \Exception("Edge case: Unable to extract original Closure from ReflectionMethod.");
+                    return array_merge(['type'   => 'Closure'], $fileLineInfo);
                 }
                 return [
-                    $refFunc->getDeclaringClass()->getName(),
-                    $refFunc->getName(),
+                        'type'   => 'value',
+                        'value'  => [
+                                $refFunc->getDeclaringClass()->getName(),
+                                $refFunc->getName(),
+                            ],
                 ];
             }
-            throw new \Exception("INTERNAL ERROR: Parameter's declaring function is neither ReflectionFunction or ReflectionMethod");
+            throw new \Exception("INTERNAL ERROR: Parameter's declaring function is neither ReflectionFunction or ReflectionMethod: " . var_export([
+                    '$refFunc' => $refFunc,
+                    '$refFunc instanceof \ReflectionMethod' => ($refFunc instanceof \ReflectionMethod),
+                    '$refFunc instanceof \ReflectionFunction' => ($refFunc instanceof \ReflectionFunction),
+                ], true));
         });
         $constructorParamsByClassName = [
             'ReflectionClass'         => ['name'],
@@ -202,8 +225,13 @@ class ReflectionMetaInfo
         if (!array_key_exists($class, $constructorParamsByClassName)) {
             throw new \Exception(sprintf('INTERNAL ERROR: EquivilanceExport params for class %s not implemented.', $class));
         }
-        $result                 = [];
-        $supressedDefaultValues = [];
+        $result = [
+            'class' => get_class($obj),
+            'constructorArgs' => null,
+            'displayValues' => [],
+        ];
+        $supressedDefaultValueInfos = [];
+        $argList                    = [];
         foreach ($constructorParamsByClassName[$class] as $paramNameSpec) {
            $normalizedSpec = $paramNameSpec;
             if (is_string($paramNameSpec)) {
@@ -221,26 +249,43 @@ class ReflectionMetaInfo
                     foreach ($normalizedSpec['callChain'] as $methodName) {
                         $outVal = $outVal->$methodName();
                     }
-                    return $outVal;
+                    return ['type' => 'value', 'value' => $outVal];
                 });
             }
             $getValueFrom = $normalizedSpec['getValueFrom'];
-            $paramVal     = $getValueFrom($obj);
+            $paramValInfo = $getValueFrom($obj);
             if (
                 !array_key_exists('defaultValue', $normalizedSpec) ||
-                ($paramVal !== $normalizedSpec['defaultValue'])
+                !array_key_exists('value', $paramValInfo) ||
+                ($paramValInfo['value'] !== $normalizedSpec['defaultValue']) ||
+                !is_array($argList)
             ) {
-                if (count($supressedDefaultValues) > 0) {
-                    foreach ($supressedDefaultValues as $defaultParamName => $defaultParamVal) {
-                        $result[$defaultParamName] = $defaultParamVal;
+                if (count($supressedDefaultValueInfos) > 0) {
+                    foreach ($supressedDefaultValueInfos as $defaultParamName => $defaultParamValInfo) {
+                        $result['displayValues'][$defaultParamName] = $defaultParamValInfo;
+                        if (is_array($argList)) {
+                            $argList[$defaultParamName] = $defaultParamValInfo['value'];
+                        }
                     }
-                    $supressedDefaultValues = [];
+                    $supressedDefaultValueInfos = [];
                 }
-                $result[$normalizedSpec['name']] = $paramVal;
+                $result['displayValues'][$normalizedSpec['name']] = $paramValInfo;
+                if (!array_key_exists('value', $paramValInfo)) {
+                    $argList = null;
+                }
+                if (is_array($argList)) {
+                    $argList[$normalizedSpec['name']] = $paramValInfo['value'];
+                }
             }
             else {
-                $supressedDefaultValues[$normalizedSpec['name']] = $paramVal;
+                $supressedDefaultValueInfos[$normalizedSpec['name']] = $paramValInfo;
             }
+        }
+        if (is_array($argList)) {
+            $result['constructorArgs'] = $argList;
+        }
+        else {
+            unset($result['constructorArgs']);
         }
         return $result;
     }

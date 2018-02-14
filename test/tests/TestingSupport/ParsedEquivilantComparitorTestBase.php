@@ -15,7 +15,7 @@ use SebastianBergmann\Exporter\Exporter;
 
 class ParsedEquivilantComparitorTestBase extends TestCaseBase
 {
-    public function getTestableConstructorArgLists()
+    public function getReflectionRepresentations()
     {
         $origExceptionMessageClass    = 'ReflectionClassConstant';
         $origExceptionMessageTemplate = 'Error calling %s::methodName() do re mi';
@@ -25,117 +25,190 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
                 yield $number;
             }
         })();
-        return [
+        $constructorArgs = [
             'ReflectionClass' =>
             [
-                '$class'         => 'ReflectionClass',
-                '$argList'       => ['name' => 'DateTime'],
-                '$filterStrings' => false,
+                'class'         => 'ReflectionClass',
+                'argList'       => ['name' => 'DateTime'],
+                'filterStrings' => false,
             ],
             'ReflectionException' =>
             [
-                '$class'         => 'ReflectionException',
-                '$argList'       => [
+                'class'         => 'ReflectionException',
+                'argList'       => [
                     'message'  => sprintf($origExceptionMessageTemplate, $origExceptionMessageClass),
                     'code'     => 42,
                     'previous' => $previousException
                 ],
-                '$filterStrings' => true,
+                'filterStrings' => true,
             ],
             'ReflectionException without optional arguments' =>
             [
-                '$class'         => 'ReflectionException',
-                '$argList'       => ['message' => 'Testing abc123 bar'],
-                '$filterStrings' => true,
+                'class'         => 'ReflectionException',
+                'argList'       => ['message' => 'Testing abc123 bar'],
+                'filterStrings' => true,
             ],
             'ReflectionException with single non-default optional argument' =>
             [
-                '$class'         => 'ReflectionException',
-                '$argList'       => [
+                'class'         => 'ReflectionException',
+                'argList'       => [
                     'message'  => 'Testing abc123 bar',
                     'code'     => 0,
                     'previous' => $previousException
                 ],
-                '$filterStrings' => true,
+                'filterStrings' => true,
             ],
             'ReflectionClassConstant' =>
             [
-                '$class'         => 'ReflectionClassConstant',
-                '$argList'       => ['class' => 'DateTime', 'name' => 'ATOM'],
-                '$filterStrings' => false,
+                'class'         => 'ReflectionClassConstant',
+                'argList'       => ['class' => 'DateTime', 'name' => 'ATOM'],
+                'filterStrings' => false,
             ],
             'ReflectionExtension' =>
             [
-                '$class'         => 'ReflectionExtension',
-                '$argList'       => ['name' => 'calendar'],
-                '$filterStrings' => false,
+                'class'         => 'ReflectionExtension',
+                'argList'       => ['name' => 'calendar'],
+                'filterStrings' => false,
             ],
             'ReflectionFunction' =>
             [
-                '$class'         => 'ReflectionFunction',
-                '$argList'       => ['name' => 'preg_match'],
-                '$filterStrings' => false,
+                'class'         => 'ReflectionFunction',
+                'argList'       => ['name' => 'preg_match'],
+                'filterStrings' => false,
             ],
             'ReflectionFunction with closure' =>
             [
-                '$class'         => 'ReflectionFunction',
-                '$argList'       => ['name' => (function () {})],
-                '$filterStrings' => false,
+                'class'         => 'ReflectionFunction',
+                'argList'       => ['name' => (function () {})],
+                'closureLines'  => (__LINE__ - 1),
+                'filterStrings' => false,
             ],
             'ReflectionMethod' =>
             [
-                '$class'         => 'ReflectionMethod',
-                '$argList'       => ['class' => 'DateTime', 'name' => 'setTime'],
-                '$filterStrings' => false,
+                'class'         => 'ReflectionMethod',
+                'argList'       => ['class' => 'DateTime', 'name' => 'setTime'],
+                'filterStrings' => false,
             ],
             'ReflectionParameter' =>
             [
-                '$class'         => 'ReflectionParameter',
-                '$argList'       => ['function' => 'preg_match', 'parameter' => 'subject'],
-                '$filterStrings' => false,
+                'class'         => 'ReflectionParameter',
+                'argList'       => ['function' => 'preg_match', 'parameter' => 'subject'],
+                'filterStrings' => false,
             ],
             'ReflectionParameter for method' =>
             [
-                '$class'         => 'ReflectionParameter',
-                '$argList'       => ['function' => ['DateTime', 'setTime'], 'parameter' => 'minute'],
-                '$filterStrings' => false,
+                'class'         => 'ReflectionParameter',
+                'argList'       => ['function' => ['DateTime', 'setTime'], 'parameter' => 'minute'],
+                'filterStrings' => false,
             ],
             'ReflectionParameter for unbound closure' =>
             [
-                '$class'         => 'ReflectionParameter',
-                '$argList'       => [
-                    'function' => \Closure::bind(function ($fee, $figh, $foe) {}, null, null),
+                'class'         => 'ReflectionParameter',
+                'argList'       => [
+                    'function' => \Closure::bind(
+                        function ($fee, $figh, $foe) {
+                            // Make clousure 3 lines long.
+                        }, null, null),
                     'parameter' => 'foe'
                 ],
-                '$filterStrings' => false,
+                'closureLines'  => (__LINE__ - 5) . '-' . (__LINE__ - 3),
+                'filterStrings' => false,
             ],
-            // 'BROKEN ReflectionParameter for bound closure' =>
-            // [
-            //     '$class'         => 'ReflectionParameter',
-            //     '$argList'       => [
-            //         'function' => function ($fee, $figh, $foe) {},
-            //         'parameter' => 'foe'
-            //     ],
-            //     '$filterStrings' => false,
-            // ],
+            'ReflectionParameter for bound closure' =>
+            [
+                'class'         => 'ReflectionParameter',
+                'argList'       => [
+                    'function'      => function ($fee, $figh, $foe) {},
+                    'parameter'     => 'foe'
+                ],
+                'closureLines'  => (__LINE__ - 3),
+                'skipArgList'   => true,
+                'displayValues' => [
+                    'function'      => ['type'  => 'Closure'],
+                    'parameter'     => ['value' => 'foe'],
+                ],
+                'filterStrings' => false,
+            ],
             'ReflectionProperty' =>
             [
-                '$class'         => 'ReflectionProperty',
-                '$argList'       => [
+                'class'         => 'ReflectionProperty',
+                'argList'       => [
                     'class' => 'Exception',
                     'name'  => 'message'
                 ],
-                '$filterStrings' => false,
+                'filterStrings' => false,
             ],
             'ReflectionGenerator' =>
             [
-                '$class'         => 'ReflectionGenerator',
-                '$argList'       => [
+                'class'         => 'ReflectionGenerator',
+                'argList'       => [
                     'generator' => $generator
                 ],
-                '$filterStrings' => false,
+                'filterStrings' => false,
             ],
         ];
+        $result = [];
+        foreach ($constructorArgs as $testCase => $constructorInfo) {
+            $newCase = [
+                '$class'                  => $constructorInfo['class'],
+                '$createFunc'             => 'strval', // Placeholder.
+                '$expectedRepresentation' => ['class' => $constructorInfo['class']],
+                '$skipTestMessage'        => null,
+                '$filterStrings'          => $constructorInfo['filterStrings'],
+            ];
+            $classReflection = null;
+            if (class_exists($constructorInfo['class'])) {
+                $classReflection = new \ReflectionClass($constructorInfo['class']);
+            }
+            if (!$classReflection || $classReflection->isUserDefined()) {
+                $newCase['$skipTestMessage'] = "Class {$constructorInfo['class']} not available in this PHP version.";
+            }
+            else {
+                if (!array_key_exists('createFunc', $constructorInfo)) {
+                    $constructorInfo['createFunc'] = (function () use ($classReflection, $constructorInfo) {
+                        return $classReflection->newInstanceArgs(array_values($constructorInfo['argList']));
+                    });
+                }
+                $newCase['$createFunc'] = $constructorInfo['createFunc'];
+                if (
+                    !array_key_exists('skipArgList', $constructorInfo) ||
+                    !$constructorInfo['skipArgList']
+                ) {
+                    $newCase['$expectedRepresentation']['constructorArgs'] = $constructorInfo['argList'];
+                }
+                if (!array_key_exists('displayValues', $constructorInfo)) {
+                    $displayValues = [];
+                    foreach ($constructorInfo['argList'] as $argName => $argValue) {
+                        $displayValues[$argName] = ['value' => $argValue];
+                    }
+                    $constructorInfo['displayValues'] = $displayValues;
+                }
+                foreach ($constructorInfo['displayValues'] as $propName => $propInfo) {
+                    if (
+                        array_key_exists('value', $propInfo) &&
+                        ($propInfo['value'] instanceof \Closure) &&
+                        !array_key_exists('type', $propInfo)
+                    ) {
+                        // Prepend key 'type'.
+                        $propInfo = array_merge(['type'  => 'Closure'], $propInfo);
+                    }
+                    if (array_key_exists('type', $propInfo) && ($propInfo['type'] == 'Closure')) {
+                       $propInfo['file']  = __FILE__;
+                       $propInfo['lines'] = $constructorInfo['closureLines'];
+                    }
+                    if (
+                        !array_key_exists('type', $propInfo) &&
+                        array_key_exists('value', $propInfo)
+                    ) {
+                        // Prepend key 'type'.
+                        $propInfo = array_merge(['type'  => 'value'], $propInfo);
+                    }
+                    $constructorInfo['displayValues'][$propName] = $propInfo;
+                }
+                $newCase['$expectedRepresentation']['displayValues'] = $constructorInfo['displayValues'];
+            }
+            $result[$testCase] = $newCase;
+        }
         return $result;
     }
 
