@@ -64,11 +64,13 @@ class EquivilanceExporter extends Exporter
         }
         if (
             ($value instanceof \Reflector) ||
+            ($value instanceof \ReflectionType ) ||
             ($value instanceof \ReflectionException) ||
             (isset($processed->shortenNestedOutput) && ($value instanceof \Exception))
         ) {
             $valueIsReflectorObject =
                 ($value instanceof \Reflector) ||
+                ($value instanceof \ReflectionType ) ||
                 ($value instanceof \ReflectionException);
             $origClass = get_class($value);
             $class     = $valueIsReflectorObject ? $this->metaInfo->getParsedClass($origClass) : $origClass;

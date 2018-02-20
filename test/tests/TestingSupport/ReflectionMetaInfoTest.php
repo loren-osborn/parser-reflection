@@ -75,6 +75,7 @@ class ReflectionMetaInfoTest extends ParsedEquivilantComparitorTestBase
             'ReflectionFunction',
             'ReflectionFunctionAbstract',
             'ReflectionMethod',
+            'ReflectionNamedType',
             'ReflectionObject',
             'ReflectionParameter',
             'ReflectionProperty',

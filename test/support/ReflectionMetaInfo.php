@@ -104,7 +104,7 @@ class ReflectionMetaInfo
     /**
      * Get constructor arguments that would yeild reflection class object.
      *
-     * @param  Reflector|ReflectionException $obj  The object to inspect
+     * @param  Reflector|ReflectionType|ReflectionException  $obj  The object to inspect
      * @return array  Constructor arguments that would create equivilant object.
      *
      */
@@ -215,6 +215,21 @@ class ReflectionMetaInfo
                     'callChain' => ['getExecutingGenerator'],
                 ],
             ],
+            'ReflectionNamedType' => [
+                'name',
+                [
+                    'name'      => 'isNullable',
+                    'callChain' => ['allowsNull'],
+                ],
+                [
+                    'name'      => 'isBuiltin',
+                    'callChain' => ['isBuiltin'],
+                ],
+                [
+                    'name'      => 'asString',
+                    'callChain' => ['__toString'],
+                ],
+            ],
             // Untested but unused: (Here for completeness)
             'ReflectionZendExtension' => ['name'],
         ];
@@ -281,7 +296,7 @@ class ReflectionMetaInfo
                 $supressedDefaultValueInfos[$normalizedSpec['name']] = $paramValInfo;
             }
         }
-        if (is_array($argList)) {
+        if (is_array($argList) && method_exists($obj, '__construct')) {
             $result['constructorArgs'] = $argList;
         }
         else {

@@ -25,6 +25,18 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
                 yield $number;
             }
         })();
+        $createArrayReflectionType = (function () {
+            $refParam = new \ReflectionParameter(function (array $foo) {}, 'foo');
+            return $refParam->getType();
+        });
+        $namedReflectionTypeClass = 'ReflectionType';
+        if (class_exists('ReflectionNamedType')) {
+            $refRefNamedType = new \ReflectionClass('ReflectionNamedType');
+            if (!$refRefNamedType->isUserDefined()) {
+                $namedReflectionTypeClass = get_class($createArrayReflectionType());
+            }
+
+        }
         $constructorArgs = [
             'ReflectionClass' =>
             [
@@ -38,7 +50,7 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
                 'argList'       => [
                     'message'  => sprintf($origExceptionMessageTemplate, $origExceptionMessageClass),
                     'code'     => 42,
-                    'previous' => $previousException
+                    'previous' => $previousException,
                 ],
                 'filterStrings' => true,
             ],
@@ -54,7 +66,7 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
                 'argList'       => [
                     'message'  => 'Testing abc123 bar',
                     'code'     => 0,
-                    'previous' => $previousException
+                    'previous' => $previousException,
                 ],
                 'filterStrings' => true,
             ],
@@ -133,8 +145,8 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
             [
                 'class'         => 'ReflectionProperty',
                 'argList'       => [
-                    'class' => 'Exception',
-                    'name'  => 'message'
+                    'class'         => 'Exception',
+                    'name'          => 'message',
                 ],
                 'filterStrings' => false,
             ],
@@ -142,7 +154,52 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
             [
                 'class'         => 'ReflectionGenerator',
                 'argList'       => [
-                    'generator' => $generator
+                    'generator'     => $generator,
+                ],
+                'filterStrings' => false,
+            ],
+            "$namedReflectionTypeClass for array" =>
+            [
+                'class'         => $namedReflectionTypeClass,
+                'createFunc'    => $createArrayReflectionType,
+                'skipArgList'   => true,
+                'displayValues' => [
+                    'name'          => ['value' => 'array'],
+                    'isNullable'    => ['value' => false],
+                    'isBuiltin'     => ['value' => true],
+                    'asString'      => ['value' => 'array'],
+                ],
+                'filterStrings' => false,
+            ],
+            "$namedReflectionTypeClass for nullable callable" =>
+            [
+                'class'         => $namedReflectionTypeClass,
+                'createFunc'    => (function () {
+                    $refParam = new \ReflectionParameter(function (callable $foo = null) {}, 'foo');
+                    return $refParam->getType();
+                }),
+                'skipArgList'   => true,
+                'displayValues' => [
+                    'name'          => ['value' => 'callable'],
+                    'isNullable'    => ['value' => true],
+                    'isBuiltin'     => ['value' => true],
+                    'asString'      => ['value' => 'callable'],
+                ],
+                'filterStrings' => false,
+            ],
+            "$namedReflectionTypeClass for nullable user defined class" =>
+            [
+                'class'         => $namedReflectionTypeClass,
+                'createFunc'    => (function () {
+                    $refParam = new \ReflectionParameter(function (ParsedEquivilantComparitorTestBase $foo = null) {}, 'foo');
+                    return $refParam->getType();
+                }),
+                'skipArgList'   => true,
+                'displayValues' => [
+                    'name'          => ['value' => ParsedEquivilantComparitorTestBase::class],
+                    'isNullable'    => ['value' => true],
+                    'isBuiltin'     => ['value' => false],
+                    'asString'      => ['value' => ParsedEquivilantComparitorTestBase::class],
                 ],
                 'filterStrings' => false,
             ],

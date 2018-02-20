@@ -325,6 +325,7 @@ class TestCaseBase extends PHPUnit_Framework_TestCase
         }
         else if (
             !($expected instanceof \Reflector) &&
+            !($expected instanceof \ReflectionType) &&
             !($expected instanceof \ReflectionException)
         ) {
             $this->assertSame($expected, $actual, $message);

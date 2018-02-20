@@ -59,7 +59,11 @@ class IsParsedEquivilantToReflectionValue extends PHPUnit_Framework_Constraint
      */
     private function getInternalComparisonType($value)
     {
-        if (($value instanceof \Reflector) || ($value instanceof \ReflectionException)) {
+        if (
+            ($value instanceof \Reflector) ||
+            ($value instanceof \ReflectionType ) ||
+            ($value instanceof \ReflectionException)
+        ) {
             return 'equivilant';
         }
         if (is_array($value)) {
@@ -88,7 +92,11 @@ class IsParsedEquivilantToReflectionValue extends PHPUnit_Framework_Constraint
         // ------
 
         // if (is_object($this->value)) {
-        //     if (($this->value instanceof \Reflector) || ($this->value instanceof \ReflectionException)) {
+        //     if (
+        //         ($this->value instanceof \Reflector) ||
+        //         ($this->value instanceof \ReflectionType ) ||
+        //         ($this->value instanceof \ReflectionException)
+        //     ) {
         //         return 'is identical to ' .
         //                $this->exporter->export($this->value);
         //     } else {
