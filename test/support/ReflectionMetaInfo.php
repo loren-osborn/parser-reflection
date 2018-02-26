@@ -104,11 +104,12 @@ class ReflectionMetaInfo
     /**
      * Get constructor arguments that would yeild reflection class object.
      *
-     * @param  Reflector|ReflectionType|ReflectionException  $obj  The object to inspect
+     * @param  Reflector|ReflectionType|ReflectionException  $obj    The object to inspect
+     * @param  string                                        $class  Override object class (for testing only)
      * @return array  Constructor arguments that would create equivilant object.
      *
      */
-    public function getReflectionRepresentation($obj)
+    public function getReflectionRepresentation($obj, $class = null)
     {
         $getFunctionNameParameter = (function ($refFunc) {
             $fileLineInfo = [];
@@ -225,15 +226,38 @@ class ReflectionMetaInfo
                     'name'      => 'isBuiltin',
                     'callChain' => ['isBuiltin'],
                 ],
+            ],
+            'ReflectionType' => [
+                [
+                    'name'      => 'isNullable',
+                    'callChain' => ['allowsNull'],
+                ],
+                [
+                    'name'      => 'isBuiltin',
+                    'callChain' => ['isBuiltin'],
+                ],
                 [
                     'name'      => 'asString',
                     'callChain' => ['__toString'],
                 ],
             ],
+            'ReflectionObject' => [
+                [
+                    'name'      => 'argument',
+                    'type'      => 'objectClass',
+                    'callChain' => ['getName'],
+                ],
+            ],
             // Untested but unused: (Here for completeness)
             'ReflectionZendExtension' => ['name'],
         ];
-        $class = get_class($obj);
+        if (is_null($class)) {
+            $class = get_class($obj);
+        }
+        if (!($obj instanceof $class)) {
+            throw new \Exception(sprintf('INTERNAL ERROR: %s is not a %s.', get_class($obj), $class));
+        }
+        $origClass = $class;
         if ($obj instanceof \Exception) {
             $class = 'ReflectionException';
         }
@@ -241,7 +265,7 @@ class ReflectionMetaInfo
             throw new \Exception(sprintf('INTERNAL ERROR: EquivilanceExport params for class %s not implemented.', $class));
         }
         $result = [
-            'class' => get_class($obj),
+            'class' => $origClass,
             'constructorArgs' => null,
             'displayValues' => [],
         ];
@@ -269,6 +293,13 @@ class ReflectionMetaInfo
             }
             $getValueFrom = $normalizedSpec['getValueFrom'];
             $paramValInfo = $getValueFrom($obj);
+            if (
+                array_key_exists('type', $normalizedSpec) &&
+                ($normalizedSpec['type'] === 'objectClass')
+            ) {
+                $paramValInfo = ['type' => 'object', 'class' => $paramValInfo['value']];
+                $argList = null;
+            }
             if (
                 !array_key_exists('defaultValue', $normalizedSpec) ||
                 !array_key_exists('value', $paramValInfo) ||

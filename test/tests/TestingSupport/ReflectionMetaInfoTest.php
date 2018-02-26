@@ -320,15 +320,69 @@ class ReflectionMetaInfoTest extends ParsedEquivilantComparitorTestBase
             $this->markTestSkipped($skipTestMessage);
         }
         $objectUnderTest = new ReflectionMetaInfo();
-        $reflectionObj   = $createFunc();
-        $representation  = $objectUnderTest->getReflectionRepresentation($reflectionObj);
-        $this->assertSame($class, get_class($reflectionObj), 'Constructed object of correct class, (Derived class not allowed.)');
-        $this->assertSame($expectedRepresentation, $representation, "Returned correct output");
-        $this->assertArrayHasKey('class', $representation, "'class' is a required key.");
-        $this->assertArrayHasKey('displayValues', $representation, "'displayValues' is a required key.");
-        foreach ($representation as $key => $value) {
-            $this->assertContains($key, ['class', 'constructorArgs', 'displayValues'], 'Allowed representation keys');
+        $reflectionObj = $createFunc();
+        // In general, conditional code in a test is a code
+        // smell I'd avoid, but the following is a way to cope
+        // with PHP 7.1 disallowing creation of a meaningful
+        // ReflectionType that isn't a ReflectionNamedType.
+        //
+        // Method's second parameter is ONLY used to test PHP
+        // 7.0 class (ReflectionType) from PHP 7.1:
+        $argLists = [];
+        if (get_class($reflectionObj) === $class) {
+            $argLists['REAL use case']     = [$reflectionObj];
+            $argLists['Unpopulated class'] = [$reflectionObj, null];
         }
-        $this->assertSame($class, $representation['class'], 'Returned correct class');
+        $argLists['Force class name'] = [$reflectionObj, $class];
+        foreach ($argLists as $args) {
+            $representation = call_user_func_array([$objectUnderTest, 'getReflectionRepresentation'], $args);
+            $this->assertInstanceOf($class, $reflectionObj, 'Constructed object of correct class, (Derived class not allowed.)');
+            $this->assertArrayHasKey('class', $representation, "'class' is a required key.");
+            $this->assertArrayHasKey('displayValues', $representation, "'displayValues' is a required key.");
+            foreach ($representation as $key => $value) {
+                $this->assertContains($key, ['class', 'constructorArgs', 'displayValues'], 'Allowed representation keys');
+            }
+            $this->assertSame($class, $representation['class'], 'Returned correct class');
+            $this->assertSame($expectedRepresentation, $representation, "Returned correct output");
+        }
+    }
+
+    /**
+     * Tests ReflectionMetaInfo getReflectionRepresentation() error cases
+     *
+     * @expectedException        \Exception
+     * @expectedExceptionMessage INTERNAL ERROR: EquivilanceExport params for class DateTime not implemented.
+     */
+    public function testGetReflectionRepresentationNullDateTime()
+    {
+        $objectUnderTest = new ReflectionMetaInfo();
+        $reflectionObj = new \DateTime();
+        $objectUnderTest->getReflectionRepresentation($reflectionObj, null);
+    }
+
+    /**
+     * Tests ReflectionMetaInfo getReflectionRepresentation() error cases
+     *
+     * @expectedException        \Exception
+     * @expectedExceptionMessage INTERNAL ERROR: EquivilanceExport params for class DateTime not implemented.
+     */
+    public function testGetReflectionRepresentationExplicitDateTime()
+    {
+        $objectUnderTest = new ReflectionMetaInfo();
+        $reflectionObj = new \DateTime();
+        $objectUnderTest->getReflectionRepresentation($reflectionObj, 'DateTime');
+    }
+
+    /**
+     * Tests ReflectionMetaInfo getReflectionRepresentation() error cases
+     *
+     * @expectedException        \Exception
+     * @expectedExceptionMessage INTERNAL ERROR: DateTime is not a stdObject.
+     */
+    public function testGetReflectionRepresentationExplicitWrongClass()
+    {
+        $objectUnderTest = new ReflectionMetaInfo();
+        $reflectionObj = new \DateTime();
+        $objectUnderTest->getReflectionRepresentation($reflectionObj, 'stdObject');
     }
 }

@@ -25,18 +25,6 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
                 yield $number;
             }
         })();
-        $createArrayReflectionType = (function () {
-            $refParam = new \ReflectionParameter(function (array $foo) {}, 'foo');
-            return $refParam->getType();
-        });
-        $namedReflectionTypeClass = 'ReflectionType';
-        if (class_exists('ReflectionNamedType')) {
-            $refRefNamedType = new \ReflectionClass('ReflectionNamedType');
-            if (!$refRefNamedType->isUserDefined()) {
-                $namedReflectionTypeClass = get_class($createArrayReflectionType());
-            }
-
-        }
         $constructorArgs = [
             'ReflectionClass' =>
             [
@@ -158,22 +146,53 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
                 ],
                 'filterStrings' => false,
             ],
-            "$namedReflectionTypeClass for array" =>
+            'ReflectionNamedType for explicitly nullable array' =>
             [
-                'class'         => $namedReflectionTypeClass,
-                'createFunc'    => $createArrayReflectionType,
+                'class'         => 'ReflectionNamedType',
+                'createFunc'    => (function () {
+                    // Use eval() to prevent parse error on PHP < 7.1.
+                    $explicitArrayArgClosure = eval('return (function (?array $foo) {});');
+                    $refParam = new \ReflectionParameter($explicitArrayArgClosure, 'foo');
+                    return $refParam->getType();
+                }),
+                'skipArgList'   => true,
+                'displayValues' => [
+                    'name'          => ['value' => 'array'],
+                    'isNullable'    => ['value' => true],
+                    'isBuiltin'     => ['value' => true],
+                ],
+                'filterStrings' => false,
+            ],
+            'ReflectionObject' =>
+            [
+                'class'         => 'ReflectionObject',
+                'skipArgList'   => true,
+                'argList'       => ['argument' => new \DateTime()],
+                'displayValues' => [
+                    'argument'      => ['type' => 'object', 'class' => 'DateTime'],
+                ],
+                'filterStrings' => false,
+            ],
+        ];
+        $refTypeVariations = [
+            '%s for array' =>
+            [
+                'class'         => 'placeholder',
+                'createFunc'    => (function () {
+                    $refParam = new \ReflectionParameter(function (array $foo) {}, 'foo');
+                    return $refParam->getType();
+                }),
                 'skipArgList'   => true,
                 'displayValues' => [
                     'name'          => ['value' => 'array'],
                     'isNullable'    => ['value' => false],
                     'isBuiltin'     => ['value' => true],
-                    'asString'      => ['value' => 'array'],
                 ],
                 'filterStrings' => false,
             ],
-            "$namedReflectionTypeClass for nullable callable" =>
+            '%s for nullable callable' =>
             [
-                'class'         => $namedReflectionTypeClass,
+                'class'         => 'placeholder',
                 'createFunc'    => (function () {
                     $refParam = new \ReflectionParameter(function (callable $foo = null) {}, 'foo');
                     return $refParam->getType();
@@ -183,13 +202,12 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
                     'name'          => ['value' => 'callable'],
                     'isNullable'    => ['value' => true],
                     'isBuiltin'     => ['value' => true],
-                    'asString'      => ['value' => 'callable'],
                 ],
                 'filterStrings' => false,
             ],
-            "$namedReflectionTypeClass for nullable user defined class" =>
+            '%s for nullable user defined class' =>
             [
-                'class'         => $namedReflectionTypeClass,
+                'class'         => 'placeholder',
                 'createFunc'    => (function () {
                     $refParam = new \ReflectionParameter(function (ParsedEquivilantComparitorTestBase $foo = null) {}, 'foo');
                     return $refParam->getType();
@@ -199,11 +217,21 @@ class ParsedEquivilantComparitorTestBase extends TestCaseBase
                     'name'          => ['value' => ParsedEquivilantComparitorTestBase::class],
                     'isNullable'    => ['value' => true],
                     'isBuiltin'     => ['value' => false],
-                    'asString'      => ['value' => ParsedEquivilantComparitorTestBase::class],
                 ],
                 'filterStrings' => false,
             ],
         ];
+        foreach (['ReflectionType', 'ReflectionNamedType'] as $reflectionTypeClass) {
+            foreach ($refTypeVariations as $caseNameTemplate => $caseInfo) {
+                $caseNameExpanded = sprintf($caseNameTemplate, $reflectionTypeClass);
+                $caseInfo['class'] = $reflectionTypeClass;
+                if ($reflectionTypeClass == 'ReflectionType') {
+                    $caseInfo['displayValues']['asString'] = $caseInfo['displayValues']['name'];
+                    unset($caseInfo['displayValues']['name']);
+                }
+                $constructorArgs[$caseNameExpanded] = $caseInfo;
+            }
+        }
         $result = [];
         foreach ($constructorArgs as $testCase => $constructorInfo) {
             $newCase = [
